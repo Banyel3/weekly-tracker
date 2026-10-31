@@ -1,10 +1,16 @@
 import cron from "node-cron";
+import { catchUpMissedJobs } from "./catchUp";
 import { rolloverStaleTasks } from "./rollover";
-import { sendDueTodayReminder } from "./reminders";
+import { sendDueTodayReminder, telegramConfigured } from "./reminders";
+import { sendWeeklySummary } from "./summary";
 import { TIMEZONE } from "./week";
 
 declare global {
   var __schedulerStarted: boolean | undefined;
+}
+
+function schedule(expression: string, job: () => Promise<unknown>): void {
+  cron.schedule(expression, () => void job().catch(console.error), { timezone: TIMEZONE });
 }
 
 export async function startScheduler(): Promise<void> {
@@ -16,17 +22,16 @@ export async function startScheduler(): Promise<void> {
   } catch (err) {
     console.error("[scheduler] startup rollover failed:", err);
   }
-
-  cron.schedule("0 0 * * 1", () => void rolloverStaleTasks().catch(console.error), {
-    timezone: TIMEZONE,
-  });
-
-  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-    cron.schedule("0 9 * * *", () => void sendDueTodayReminder().catch(console.error), {
-      timezone: TIMEZONE,
-    });
-    console.log("[scheduler] telegram reminders enabled");
-  } else {
-    console.log("[scheduler] telegram reminders disabled");
+  try {
+    await catchUpMissedJobs();
+  } catch (err) {
+    console.error("[scheduler] catch-up failed:", err);
   }
+
+  schedule("0 0 * * 1", () => rolloverStaleTasks());
+  schedule("0 * * * *", () => rolloverStaleTasks());
+  schedule("0 9 * * *", () => sendDueTodayReminder());
+  schedule("0 18 * * 5", () => sendWeeklySummary());
+  console.log("[scheduler] crons: rollover(weekly,hourly) reminder summary");
+  console.log(`[scheduler] telegram ${telegramConfigured() ? "enabled" : "disabled"}`);
 }

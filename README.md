@@ -6,7 +6,7 @@ A single-user, self-hosted weekly to-do kanban board. Tasks live in four columns
 
 1. Copy `.env.example` to `.env`. This is optional and only needed for Telegram reminders.
 2. Run `docker compose up`. After pulling changes, run `docker compose up --build`; the image build needs internet access (npm registry and Google Fonts for Geist).
-3. Open `http://localhost:3000`.
+3. Open `http://localhost:3000` (bound to loopback only).
 
 Database migrations are applied automatically when the app container starts.
 
@@ -16,16 +16,37 @@ Tasks are stored in the named Docker volume `pgdata`. The data survives `docker 
 
 ## Telegram reminders (optional)
 
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`. When both are set, the app sends a message every day at 09:00 Asia/Manila time listing the tasks due that day. If nothing is due, no message is sent. When either variable is empty, reminders are disabled.
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`. When both are set, the app sends a message every day at 09:00 Asia/Manila time listing the tasks due that day, and a week summary every Friday at 18:00. If nothing is due, no reminder is sent. When either variable is empty, Telegram messages are disabled.
 
 ## How the week works
 
-A week is the ISO week, Monday to Sunday, in the Asia/Manila timezone. Rollover runs every Monday at 00:00 Asia/Manila, and also once each time the server starts to catch up on any missed rollover. At rollover, tasks from a past week that are Done are archived and leave the board; all other unfinished tasks from a past week move back to Backlog.
+A week is the ISO week, Monday to Sunday, in the Asia/Manila timezone. Rollover runs every Monday at 00:00 Asia/Manila, again every hour as an idempotent check, and once each time the server starts, so a machine that slept through Monday midnight still rolls over. At rollover, tasks from a past week that are Done are archived and leave the board; all other unfinished tasks from a past week move back to Backlog.
+
+With Telegram configured, a summary of the week is sent every Friday at 18:00. If the server was off at 09:00 or at Friday 18:00, the missed reminder or summary is sent once when it starts again later that day.
+
+## Run on a laptop over Tailscale
+
+Prerequisites: Docker, and Tailscale installed and signed in on the laptop.
+
+1. Clone the repo, copy `.env.example` to `.env` and fill it in.
+2. Run `docker compose up -d --build`. The app listens on `127.0.0.1:3000` only, so it is not reachable from the LAN.
+3. Run `tailscale serve --bg 3000`. The board is then at `https://<laptop>.<tailnet>.ts.net` for devices on your tailnet, with a managed HTTPS certificate. The tailnet is the login; the app has no auth of its own.
+4. Set Docker Desktop (or the Docker daemon) to start at boot. Both services use `restart: unless-stopped`, so the stack comes back after a reboot. `docker compose ps` shows the app's health from `/api/health`.
+
+Backups: `scripts/backup.sh` writes `backups/weekly-tracker-YYYYMMDD-HHMM.sql.gz` and deletes backups older than `BACKUP_KEEP_DAYS` (default 30). Run it daily from the host crontab:
+
+```
+0 3 * * * /path/to/weekly-tracker/scripts/backup.sh
+```
+
+Restore with `scripts/restore.sh backups/<file>.sql.gz` while the stack is running. It replaces the current data.
+
+Moving to another machine: run `scripts/backup.sh` on the old machine and copy the file over; on the new one clone the repo, copy `.env`, run `docker compose up -d --build`, then `scripts/restore.sh <file>` and `tailscale serve --bg 3000`.
 
 ## Local development
 
 1. Run `npm install`.
-2. Start Postgres only: `docker compose up db`. It listens on host port 5433.
+2. Start Postgres only, with its port published on host port 5433: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db`.
 3. Copy `.env.example` to `.env` so `DATABASE_URL` points at that database.
 4. Run `npx prisma migrate dev`.
 5. Run `npm run dev` and open `http://localhost:3000`.
