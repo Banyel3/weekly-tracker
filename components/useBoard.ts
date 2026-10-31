@@ -10,6 +10,8 @@ export type TaskPatch = Partial<Pick<TaskDto, "title" | "note" | "dueDate" | "st
 export type NewTask = Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">;
 export type NewProject = { name: string; color: ProjectColor };
 export type ProjectPatch = Partial<NewProject>;
+/** retryable is false for 4xx answers (validation, duplicate name): resending the same request cannot succeed. */
+export type ProjectFailure = { message: string; retryable: boolean };
 export type LoadStatus = "loading" | "ready" | "error";
 export type BoardError = "load" | "save" | null;
 
@@ -23,6 +25,10 @@ function tempId(): string {
 
 async function send(url: string, init: RequestInit): Promise<Response | null> {
   return fetch(url, init).catch(() => null);
+}
+
+async function projectFailure(res: Response | null): Promise<ProjectFailure> {
+  return { message: await errorText(res), retryable: !res || res.status >= 500 };
 }
 
 async function errorText(res: Response | null): Promise<string> {
@@ -151,7 +157,7 @@ export function useBoard() {
     return null;
   }, []);
 
-  const updateProject = useCallback(async (id: string, patch: ProjectPatch): Promise<string | null> => {
+  const updateProject = useCallback(async (id: string, patch: ProjectPatch): Promise<ProjectFailure | null> => {
     const previous = latest.current.projects.find((p) => p.id === id);
     if (!previous) return null;
     const put = (next: ProjectDto) => setProjects((ps) => sortProjects(ps.map((p) => (p.id === id ? next : p))));
@@ -166,10 +172,10 @@ export function useBoard() {
       return null;
     }
     put(previous);
-    return errorText(res);
+    return projectFailure(res);
   }, []);
 
-  const removeProject = useCallback(async (id: string): Promise<string | null> => {
+  const removeProject = useCallback(async (id: string): Promise<ProjectFailure | null> => {
     const removed = latest.current.projects.find((p) => p.id === id);
     if (!removed) return null;
     const orphaned = new Set(latest.current.tasks.filter((t) => t.projectId === id).map((t) => t.id));
@@ -179,7 +185,7 @@ export function useBoard() {
     if (res?.ok || res?.status === 404) return null;
     setProjects((ps) => sortProjects([...ps, removed]));
     setTasks((ts) => ts.map((t) => (orphaned.has(t.id) && t.projectId === null ? { ...t, projectId: id } : t)));
-    return errorText(res);
+    return projectFailure(res);
   }, []);
 
   const retry = useCallback(() => {

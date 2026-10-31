@@ -8,6 +8,7 @@ import { useFilters } from "@/components/useFilters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import type { ProjectFailure } from "@/components/useBoard";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import { cn } from "@/lib/utils";
 import { ProjectMenu, type ProjectAction } from "./ProjectMenu";
@@ -17,7 +18,7 @@ const DEFAULT_COLOR: ProjectColor = "teal";
 
 type Notice =
   | { kind: "deleted"; project: ProjectDto; taskIds: string[] }
-  | { kind: "failed"; again: () => void }
+  | { kind: "failed"; message: string; again?: () => void }
   | null;
 
 type Progress = { done: number; total: number };
@@ -67,14 +68,18 @@ export function ProjectsList({ showBars }: Props) {
     if (notice?.kind === "deleted") undoRef.current?.focus();
   }, [notice]);
 
+  function fail({ message, retryable }: ProjectFailure, again: () => void) {
+    show({ kind: "failed", message, again: retryable ? again : undefined });
+  }
+
   async function rename(project: ProjectDto, name: string) {
     const failure = await board.updateProject(project.id, { name });
-    if (failure) show({ kind: "failed", again: () => rename(project, name) });
+    if (failure) fail(failure, () => rename(project, name));
   }
 
   async function recolor(project: ProjectDto, color: ProjectColor) {
     const failure = await board.updateProject(project.id, { color });
-    if (failure) show({ kind: "failed", again: () => recolor(project, color) });
+    if (failure) fail(failure, () => recolor(project, color));
   }
 
   async function remove(project: ProjectDto) {
@@ -82,18 +87,27 @@ export function ProjectsList({ showBars }: Props) {
     if (filter?.kind === "project" && filter.id === project.id) setFilter(null);
     show({ kind: "deleted", project, taskIds });
     const failure = await board.removeProject(project.id);
-    if (failure) show({ kind: "failed", again: () => remove(project) });
+    if (failure) fail(failure, () => remove(project));
   }
 
   async function undo(project: ProjectDto, taskIds: string[]) {
     addRef.current?.focus();
     show(null);
+    let restored: ProjectDto;
     try {
-      const restored = await board.addProject({ name: project.name, color: project.color as ProjectColor });
-      await Promise.all(taskIds.map((id) => board.updateTask(id, { projectId: restored.id })));
-    } catch {
-      show({ kind: "failed", again: () => undo(project, taskIds) });
+      restored = await board.addProject({ name: project.name, color: project.color as ProjectColor });
+    } catch (e) {
+      show({ kind: "failed", message: e instanceof Error ? e.message : "couldn't restore the project" });
+      return;
     }
+    await relink(restored.id, taskIds);
+  }
+
+  async function relink(projectId: string, taskIds: string[]) {
+    const results = await Promise.all(taskIds.map((id) => board.updateTask(id, { projectId })));
+    const failed = taskIds.filter((_, i) => results[i]);
+    const message = results.find(Boolean);
+    if (message) show({ kind: "failed", message, again: () => relink(projectId, failed) });
   }
 
   function toggle(id: string) {
@@ -136,18 +150,24 @@ export function ProjectsList({ showBars }: Props) {
           </p>
         )}
         {notice?.kind === "failed" && (
-          <p className="m-0">
-            couldn&apos;t save ·{" "}
-            <button
-              type="button"
-              className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => {
-                show(null);
-                notice.again();
-              }}
-            >
-              retry
-            </button>
+          <p role="alert" className="m-0">
+            {notice.message}
+            {notice.again && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    const again = notice.again;
+                    show(null);
+                    again?.();
+                  }}
+                >
+                  retry
+                </button>
+              </>
+            )}
           </p>
         )}
       </div>
@@ -224,11 +244,13 @@ function ProjectRow({ project, progress, selected, showBars, onToggle, onRename,
                     style={{ background: colorVar(project.color) }}
                   />
                   <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                  <span
-                    className="text-xs text-muted-foreground tabular-nums"
-                    aria-label={`${progress.done} of ${progress.total} done this week`}
-                  >
-                    {progress.done}/{progress.total}
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    <span aria-hidden="true">
+                      {progress.done}/{progress.total}
+                    </span>
+                    <span className="sr-only">
+                      {progress.done} of {progress.total} done this week
+                    </span>
                   </span>
                 </span>
                 <span

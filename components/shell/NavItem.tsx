@@ -31,16 +31,17 @@ export function NavItem({ href, icon: Icon, label, current = false, count, badge
       <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.8} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && (
-        <span className="text-xs text-muted-foreground tabular-nums" aria-label={`${count} tasks`}>
+        <span className="text-xs text-muted-foreground tabular-nums">
           {count}
+          <span className="sr-only"> tasks</span>
         </span>
       )}
       {badge !== undefined && badge > 0 && (
         <span
           className="rounded-full bg-primary px-[7px] text-[11px] leading-[18px] font-semibold text-primary-foreground tabular-nums"
-          aria-label={`${badge} need attention`}
         >
           {badge}
+          <span className="sr-only"> need attention</span>
         </span>
       )}
     </Link>
