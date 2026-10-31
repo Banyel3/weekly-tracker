@@ -5,7 +5,7 @@ A single-user, self-hosted weekly to-do kanban board. Tasks live in four columns
 ## Run
 
 1. Copy `.env.example` to `.env`. This is optional and only needed for Telegram reminders.
-2. Run `docker compose up`.
+2. Run `docker compose up`. After pulling changes, run `docker compose up --build`; the image build needs internet access (npm registry and Google Fonts for Geist).
 3. Open `http://localhost:3000`.
 
 Database migrations are applied automatically when the app container starts.

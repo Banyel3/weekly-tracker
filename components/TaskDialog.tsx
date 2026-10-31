@@ -73,7 +73,7 @@ export function TaskDialog({ task, onClose, onSave, onDelete }: Props) {
         title: form.title,
         dueDate: form.dueDate || null,
         note: form.note || null,
-        status: form.status,
+        ...(form.status !== task.status && { status: form.status }),
       }),
     );
   }
