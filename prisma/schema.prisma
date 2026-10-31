@@ -23,6 +23,16 @@ model Task {
   weekOf       DateTime? @db.Date
   archived     Boolean   @default(false)
   rolledBackAt DateTime? @db.Date
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String
+  createdAt DateTime @default(now())
+  tasks     Task[]
 }

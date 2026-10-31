@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import type { z, ZodTypeAny } from "zod";
 
 export type Parsed<T> = { ok: true; data: T } | { ok: false; response: Response };
@@ -19,3 +20,10 @@ export async function parseBody<S extends ZodTypeAny>(
   }
   return { ok: true, data: parsed.data };
 }
+
+/** P2002 unique violation, P2003 foreign key violation. */
+export function isPrismaError(e: unknown, code: "P2002" | "P2003"): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === code;
+}
+
+export const unknownProject = () => Response.json({ error: "Unknown project" }, { status: 400 });

@@ -1,4 +1,4 @@
-import { parseBody } from "@/lib/http";
+import { isPrismaError, parseBody, unknownProject } from "@/lib/http";
 import { deleteTask, updateTask, updateTaskSchema } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +11,13 @@ export async function PATCH(request: Request, { params }: Context) {
   const { id } = await params;
   const parsed = await parseBody(request, updateTaskSchema);
   if (!parsed.ok) return parsed.response;
-  const task = await updateTask(id, parsed.data);
-  return task ? Response.json(task) : notFound();
+  try {
+    const task = await updateTask(id, parsed.data);
+    return task ? Response.json(task) : notFound();
+  } catch (e) {
+    if (isPrismaError(e, "P2003")) return unknownProject();
+    throw e;
+  }
 }
 
 export async function DELETE(_request: Request, { params }: Context) {

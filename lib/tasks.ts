@@ -1,6 +1,7 @@
 import { Status, type Task } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "./db";
+import { listProjects, type ProjectDto } from "./projects";
 import { currentWeekStart, dateToYmd, weekRange, ymdToDate, type WeekRange } from "./week";
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -10,6 +11,7 @@ export const createTaskSchema = z.object({
   note: z.string().max(2000).nullish(),
   dueDate: ymd.nullish(),
   status: z.nativeEnum(Status).default("BACKLOG"),
+  projectId: z.string().nullish(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();
@@ -25,6 +27,7 @@ export type TaskDto = {
   status: Status;
   weekOf: string | null;
   rolledBackAt: string | null;
+  projectId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -38,6 +41,7 @@ export function toDto(task: Task): TaskDto {
     status: task.status,
     weekOf: task.weekOf ? dateToYmd(task.weekOf) : null,
     rolledBackAt: task.rolledBackAt ? dateToYmd(task.rolledBackAt) : null,
+    projectId: task.projectId,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
@@ -51,17 +55,22 @@ function optionalDate(value: string | null | undefined): Date | null | undefined
   return value == null ? value : ymdToDate(value);
 }
 
-export async function listBoard(now?: Date): Promise<{ week: WeekRange; tasks: TaskDto[] }> {
+export type BoardDto = { week: WeekRange; projects: ProjectDto[]; tasks: TaskDto[] };
+
+export async function listBoard(now?: Date): Promise<BoardDto> {
   const week = weekRange(now);
-  const tasks = await prisma.task.findMany({
-    where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
-    orderBy: [
-      { rolledBackAt: { sort: "desc", nulls: "last" } },
-      { dueDate: { sort: "asc", nulls: "last" } },
-      { createdAt: "asc" },
-    ],
-  });
-  return { week, tasks: tasks.map(toDto) };
+  const [projects, tasks] = await Promise.all([
+    listProjects(),
+    prisma.task.findMany({
+      where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
+      orderBy: [
+        { rolledBackAt: { sort: "desc", nulls: "last" } },
+        { dueDate: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" },
+      ],
+    }),
+  ]);
+  return { week, projects, tasks: tasks.map(toDto) };
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
@@ -72,6 +81,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
       dueDate: optionalDate(input.dueDate) ?? null,
       status: input.status,
       weekOf: weekOfFor(input.status),
+      projectId: input.projectId ?? null,
     },
   });
   return toDto(task);
@@ -86,6 +96,7 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       title: input.title,
       note: input.note,
       dueDate: optionalDate(input.dueDate),
+      projectId: input.projectId,
       ...(input.status !== undefined && {
         status: input.status,
         weekOf: weekOfFor(input.status),

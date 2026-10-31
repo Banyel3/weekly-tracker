@@ -82,6 +82,7 @@ export function useBoard() {
       status: to,
       weekOf: null,
       rolledBackAt: null,
+      projectId: null,
       createdAt: now,
       updatedAt: now,
     };
