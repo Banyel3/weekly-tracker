@@ -1,29 +1,89 @@
-/* tokens */
-:root {
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../themes/cosmic-night.css";
+@import "../themes/mocha-mousse.css";
+@import "../themes/catppuccin.css";
+@import "../themes/graphite.css";
+@import "../themes/northern-lights.css";
+@import "../themes/amethyst-haze.css";
+
+@source not "../.gstack";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-alert: var(--alert);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* app tokens, after the presets so they win per theme */
+:root,
+:root[data-theme] {
   color-scheme: dark;
-  --bg: oklch(0.19 0.008 70);
-  --column: oklch(0.22 0.008 70);
-  --card: oklch(0.26 0.008 70);
-  --border: oklch(0.32 0.008 70);
-  --border-hover: oklch(0.40 0.008 70);
-  --text: oklch(0.92 0.008 70);
-  --muted: oklch(0.68 0.01 70);
-  --accent: oklch(0.78 0.12 75);
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+  --alert: var(--chart-5);
   /* project identity colors: chips and swatches only, never status */
   --project-rose: oklch(0.72 0.14 15);
-  --project-amber: oklch(0.78 0.13 75);
+  --project-amber: oklch(0.80 0.12 80);
   --project-lime: oklch(0.78 0.14 125);
-  --project-teal: oklch(0.76 0.11 180);
-  --project-sky: oklch(0.75 0.11 230);
-  --project-violet: oklch(0.72 0.13 290);
-  --project-pink: oklch(0.74 0.14 340);
-  --project-slate: oklch(0.72 0.02 250);
+  --project-teal: var(--chart-4);
+  --project-sky: var(--chart-3);
+  --project-violet: var(--chart-2);
+  --project-pink: var(--chart-5);
+  --project-slate: oklch(0.62 0.03 283);
+  --status-backlog: var(--project-slate);
+  --status-this-week: var(--chart-3);
+  --status-in-progress: var(--primary);
+  --status-done: var(--chart-4);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --motion: 150ms var(--ease);
   --gap: 16px;
   --page-pad: 24px;
 }
-
 *,
 *::before,
 *::after {
@@ -32,16 +92,16 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  caret-color: var(--accent);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  caret-color: var(--primary);
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
 }
 
-::selection { background: color-mix(in oklch, var(--accent) 30%, transparent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
@@ -57,11 +117,11 @@ button {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--column);
+  background: var(--card);
   cursor: pointer;
   transition: border-color var(--motion), opacity var(--motion);
 }
-button:hover:not(:disabled) { border-color: var(--border-hover); }
+button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: 0.5; cursor: default; }
 button.primary { font-weight: 500; }
 
@@ -95,9 +155,9 @@ button.primary { font-weight: 500; }
 
 .app-header { flex: none; min-height: 20px; }
 .app-header h1 { margin: 0; font-size: 15px; font-weight: 500; line-height: 20px; }
-.rollover-line { margin: 4px 0 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rollover-line { margin: 4px 0 0; color: var(--muted-foreground); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-.status-line { flex: none; color: var(--muted); }
+.status-line { flex: none; color: var(--muted-foreground); }
 .status-line p { margin: 8px 0 0; }
 
 .board {
@@ -116,12 +176,12 @@ button.primary { font-weight: 500; }
   flex-direction: column;
   min-height: 0;
   padding: 8px;
-  background: var(--column);
+  background: var(--card);
   border: 1px solid transparent;
   border-radius: 8px;
   transition: border-color var(--motion);
 }
-.column.is-over { border-color: var(--accent); }
+.column.is-over { border-color: var(--primary); }
 
 .column-head {
   position: sticky;
@@ -132,13 +192,13 @@ button.primary { font-weight: 500; }
   gap: 8px;
   padding: 4px 2px 8px;
   border-top: 2px solid transparent;
-  background: var(--column);
-  color: var(--muted);
+  background: var(--card);
+  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
 }
-.column-in-progress .column-head { border-top-color: var(--accent); }
+.column-in-progress .column-head { border-top-color: var(--primary); }
 .column-head h2 { margin: 0; font: inherit; }
 .count { font-variant-numeric: tabular-nums; }
 
@@ -151,7 +211,7 @@ button.primary { font-weight: 500; }
   gap: 6px;
 }
 
-.empty { margin: 0; padding: 4px 2px; color: var(--muted); }
+.empty { margin: 0; padding: 4px 2px; color: var(--muted-foreground); }
 
 .placeholder {
   flex: none;
@@ -164,16 +224,16 @@ button.primary { font-weight: 500; }
 .card {
   flex: none;
   padding: 8px 10px;
-  background: var(--card);
+  background: var(--muted);
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: grab;
   transition: border-color var(--motion), opacity var(--motion);
 }
-.card:hover { border-color: var(--border-hover); }
+.card:hover { border-color: var(--accent); }
 .card.is-source { opacity: 0.4; }
 .card.is-pending { opacity: 0.6; cursor: default; }
-.card.is-dragging { border-color: var(--accent); cursor: grabbing; }
+.card.is-dragging { border-color: var(--primary); cursor: grabbing; }
 .card.is-done .card-title,
 .card.is-done .card-meta { opacity: 0.6; }
 
@@ -198,12 +258,12 @@ button.primary { font-weight: 500; }
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 12px;
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
-.card-due.is-urgent { color: var(--accent); }
+.card-due.is-urgent { color: var(--alert); }
 
 .chip {
   display: inline-flex;
@@ -225,7 +285,7 @@ button.primary { font-weight: 500; }
   margin-top: 6px;
   border-color: transparent;
   background: none;
-  color: var(--muted);
+  color: var(--muted-foreground);
   text-align: left;
 }
 
@@ -233,7 +293,7 @@ button.primary { font-weight: 500; }
 .task-dialog textarea,
 .task-dialog select {
   padding: 6px 8px;
-  background: var(--bg);
+  background: var(--background);
   border: 1px solid var(--border);
   border-radius: 6px;
   transition: border-color var(--motion);
@@ -242,13 +302,14 @@ button.primary { font-weight: 500; }
 /* dialog */
 .task-dialog {
   width: min(440px, calc(100vw - 32px));
+  margin: auto;
   padding: 24px;
-  background: var(--column);
-  color: var(--text);
+  background: var(--card);
+  color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.task-dialog::backdrop { background: oklch(0.12 0.008 70 / 0.6); }
+.task-dialog::backdrop { background: color-mix(in oklch, var(--background) 60%, transparent); }
 .task-dialog h2 { margin: 0 0 16px; font-size: 15px; font-weight: 500; }
 
 .task-dialog label {
@@ -256,11 +317,11 @@ button.primary { font-weight: 500; }
   flex-direction: column;
   gap: 4px;
   margin-bottom: 12px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 600;
 }
-.task-dialog label > * { color: var(--text); font-size: 14px; font-weight: 400; }
+.task-dialog label > * { color: var(--foreground); font-size: 14px; font-weight: 400; }
 .task-dialog textarea { resize: vertical; }
 
 .project-row { display: flex; align-items: center; gap: 8px; }
@@ -284,7 +345,7 @@ button.primary { font-weight: 500; }
 .swatches legend {
   margin-bottom: 4px;
   padding: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 600;
 }
@@ -301,8 +362,8 @@ button.primary { font-weight: 500; }
   transition: border-color var(--motion);
 }
 .swatch-dot { width: 14px; height: 14px; border-radius: 50%; }
-.task-dialog label.swatch:has(input:checked) { border-color: var(--text); }
-.task-dialog label.swatch:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.task-dialog label.swatch:has(input:checked) { border-color: var(--foreground); }
+.task-dialog label.swatch:has(input:focus-visible) { outline: 2px solid var(--ring); outline-offset: 2px; }
 .form-error { margin: 0 0 12px; }
 .dialog-actions { display: flex; gap: 8px; }
 .spacer { flex: 1; }
