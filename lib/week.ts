@@ -33,3 +33,7 @@ export function formatWeekRange(range: WeekRange): string {
   const end = formatInTimeZone(ymdToDate(range.end), "UTC", "EEE, MMM d, yyyy");
   return `${start} – ${end}`;
 }
+
+export function shiftYmd(ymd: string, days: number): string {
+  return dateToYmd(new Date(ymdToDate(ymd).getTime() + days * DAY_MS));
+}

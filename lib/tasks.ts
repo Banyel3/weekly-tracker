@@ -1,8 +1,9 @@
-import { Status, type Task } from "@prisma/client";
+import { Priority, Status, type Task } from "@prisma/client";
 import { z } from "zod";
+import { checklistSchema, normalizeChecklist, readChecklist, type ChecklistItem } from "./checklist";
 import { prisma } from "./db";
 import { listProjects, type ProjectDto } from "./projects";
-import { currentWeekStart, dateToYmd, weekRange, ymdToDate, type WeekRange } from "./week";
+import { currentWeekStart, dateToYmd, todayYmd, weekRange, ymdToDate, type WeekRange } from "./week";
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -12,9 +13,18 @@ export const createTaskSchema = z.object({
   dueDate: ymd.nullish(),
   status: z.nativeEnum(Status).default("BACKLOG"),
   projectId: z.string().nullish(),
+  priority: z.nativeEnum(Priority).default("NONE"),
+  checklist: checklistSchema.default([]),
 });
 
-export const updateTaskSchema = createTaskSchema.partial();
+export const updateTaskSchema = createTaskSchema
+  .partial()
+  .extend({
+    status: z.nativeEnum(Status).optional(),
+    priority: z.nativeEnum(Priority).optional(),
+    checklist: checklistSchema.optional(),
+    archived: z.literal(false).optional(),
+  });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -28,6 +38,11 @@ export type TaskDto = {
   weekOf: string | null;
   rolledBackAt: string | null;
   projectId: string | null;
+  priority: Priority;
+  checklist: ChecklistItem[];
+  rolloverCount: number;
+  completedAt: string | null;
+  archived: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,6 +57,11 @@ export function toDto(task: Task): TaskDto {
     weekOf: task.weekOf ? dateToYmd(task.weekOf) : null,
     rolledBackAt: task.rolledBackAt ? dateToYmd(task.rolledBackAt) : null,
     projectId: task.projectId,
+    priority: task.priority,
+    checklist: readChecklist(task.checklist),
+    rolloverCount: task.rolloverCount,
+    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+    archived: task.archived,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
@@ -55,11 +75,39 @@ function optionalDate(value: string | null | undefined): Date | null | undefined
   return value == null ? value : ymdToDate(value);
 }
 
-export type BoardDto = { week: WeekRange; projects: ProjectDto[]; tasks: TaskDto[] };
+const PRIORITY_RANK: Record<Priority, number> = { URGENT: 0, HIGH: 1, NONE: 2 };
 
-export async function listBoard(now?: Date): Promise<BoardDto> {
+export function sortColumn(tasks: TaskDto[], weekStart: string = currentWeekStart()): TaskDto[] {
+  const rolledBack = (t: TaskDto) => (t.rolledBackAt === weekStart ? 0 : 1);
+  return [...tasks].sort(
+    (a, b) =>
+      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      rolledBack(a) - rolledBack(b) ||
+      compareNullsLast(a.dueDate, b.dueDate) ||
+      a.createdAt.localeCompare(b.createdAt),
+  );
+}
+
+function compareNullsLast(a: string | null, b: string | null): number {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a.localeCompare(b);
+}
+
+export type BoardCounts = { live: number; archived: number; nudges: number };
+
+export type BoardDto = {
+  week: WeekRange;
+  today: string;
+  projects: ProjectDto[];
+  tasks: TaskDto[];
+  counts: BoardCounts;
+};
+
+export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
   const week = weekRange(now);
-  const [projects, tasks] = await Promise.all([
+  const [projects, tasks, live, archived, nudges] = await Promise.all([
     listProjects(),
     prisma.task.findMany({
       where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
@@ -69,8 +117,23 @@ export async function listBoard(now?: Date): Promise<BoardDto> {
         { createdAt: "asc" },
       ],
     }),
+    prisma.task.count({ where: { archived: false } }),
+    prisma.task.count({ where: { archived: true } }),
+    prisma.task.count({ where: { archived: false, status: Status.BACKLOG, rolloverCount: { gte: 2 } } }),
   ]);
-  return { week, projects, tasks: tasks.map(toDto) };
+  const dtos = tasks.map(toDto);
+  const sorted = Object.values(Status).flatMap((status) =>
+    sortColumn(
+      dtos.filter((t) => t.status === status),
+      week.start,
+    ),
+  );
+  return { week, today: todayYmd(now), projects, tasks: sorted, counts: { live, archived, nudges } };
+}
+
+function completedAtFor(status: Status, previous: Task | null, now: Date): Date | null {
+  if (status !== Status.DONE) return null;
+  return previous?.status === Status.DONE ? previous.completedAt ?? now : now;
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
@@ -82,6 +145,9 @@ export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
       status: input.status,
       weekOf: weekOfFor(input.status),
       projectId: input.projectId ?? null,
+      priority: input.priority,
+      checklist: normalizeChecklist(input.checklist),
+      completedAt: completedAtFor(input.status, null, new Date()),
     },
   });
   return toDto(task);
@@ -97,9 +163,19 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       note: input.note,
       dueDate: optionalDate(input.dueDate),
       projectId: input.projectId,
+      priority: input.priority,
+      ...(input.checklist !== undefined && { checklist: normalizeChecklist(input.checklist) }),
       ...(input.status !== undefined && {
         status: input.status,
         weekOf: weekOfFor(input.status),
+        rolledBackAt: null,
+        completedAt: completedAtFor(input.status, existing, new Date()),
+      }),
+      ...(input.archived === false && {
+        archived: false,
+        status: Status.BACKLOG,
+        weekOf: null,
+        completedAt: null,
         rolledBackAt: null,
       }),
     },

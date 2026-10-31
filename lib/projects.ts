@@ -30,3 +30,20 @@ export async function listProjects(): Promise<ProjectDto[]> {
 export async function createProject(input: CreateProjectInput): Promise<ProjectDto> {
   return toDto(await prisma.project.create({ data: { name: input.name, color: input.color } }));
 }
+
+export const updateProjectSchema = createProjectSchema.partial();
+
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+
+/** Returns null when missing; throws Prisma P2002 on a duplicate name. */
+export async function updateProject(id: string, input: UpdateProjectInput): Promise<ProjectDto | null> {
+  const existing = await prisma.project.findUnique({ where: { id } });
+  if (!existing) return null;
+  return toDto(await prisma.project.update({ where: { id }, data: { name: input.name, color: input.color } }));
+}
+
+/** Tasks keep living with a null project through the SetNull relation. */
+export async function deleteProject(id: string): Promise<boolean> {
+  const { count } = await prisma.project.deleteMany({ where: { id } });
+  return count > 0;
+}

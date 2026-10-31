@@ -84,6 +84,11 @@ export function useBoard() {
       id: tempId(),
       weekOf: null,
       rolledBackAt: null,
+      priority: "NONE",
+      checklist: [],
+      rolloverCount: 0,
+      completedAt: null,
+      archived: false,
       createdAt: now,
       updatedAt: now,
     };

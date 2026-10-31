@@ -14,19 +14,29 @@ enum Status {
   DONE
 }
 
+enum Priority {
+  NONE
+  HIGH
+  URGENT
+}
+
 model Task {
-  id           String    @id @default(cuid())
-  title        String
-  note         String?
-  dueDate      DateTime? @db.Date
-  status       Status    @default(BACKLOG)
-  weekOf       DateTime? @db.Date
-  archived     Boolean   @default(false)
-  rolledBackAt DateTime? @db.Date
-  projectId    String?
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  note          String?
+  dueDate       DateTime? @db.Date
+  status        Status    @default(BACKLOG)
+  weekOf        DateTime? @db.Date
+  archived      Boolean   @default(false)
+  rolledBackAt  DateTime? @db.Date
+  priority      Priority  @default(NONE)
+  checklist     Json      @default("[]")
+  rolloverCount Int       @default(0)
+  completedAt   DateTime?
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Project {
@@ -35,4 +45,10 @@ model Project {
   color     String
   createdAt DateTime @default(now())
   tasks     Task[]
+}
+
+model AppState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
