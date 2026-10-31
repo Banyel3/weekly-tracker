@@ -1,3 +1,5 @@
+import { Board } from "@/components/Board";
+
 export default function Home() {
-  return <main>Weekly Tracker</main>;
+  return <Board />;
 }
