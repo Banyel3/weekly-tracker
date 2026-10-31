@@ -56,6 +56,16 @@ These bind every task. Exact values; use verbatim.
 - **Tests:** `vitest` unit tests for `lib/week.ts` only (pure date math). Everything that touches the database is verified manually against the compose `db` service, with the commands and output recorded in the task report. `npm test` runs `vitest run`.
 - **Code style:** small files, one responsibility each. No comments that restate the code. No dead code, no TODOs.
 
+- **Design tokens (added by /plan-design-review 2026-10-31; supersede any "light theme" wording in Task 4; DESIGN.md mirrors them):**
+  - Theme: dark-first for evening use. `color-scheme: dark`. No pure black or pure white anywhere.
+  - Colors (OKLCH, warm hue 70): `--bg oklch(0.19 0.008 70)`, `--column oklch(0.22 0.008 70)`, `--card oklch(0.26 0.008 70)`, `--border oklch(0.32 0.008 70)`, `--border-hover oklch(0.40 0.008 70)`, `--text oklch(0.92 0.008 70)`, `--muted oklch(0.68 0.01 70)`, `--accent oklch(0.78 0.12 75)`. The accent is used only for: overdue/today due labels, the In Progress column marker, focus rings, drag/drop borders, selection and caret. Nothing else is colored.
+  - Type: Geist Sans via `next/font/google` (self-hosted at build; no runtime Google request), system sans fallback. Body 14px/20px. Card title 14px/500. Column label 12px/600 sentence case in `--muted`, count in `--muted` with `font-variant-numeric: tabular-nums`. Header h1 15px/500 in `--text`. Due labels 12px.
+  - Spacing: 4px grid. Card padding 8px 10px; column padding 8px; column gap 16px; page padding 24px (16px under 600px). Card gap 6px.
+  - Radius: card and inputs 6px; column 8px.
+  - Motion: 150ms `cubic-bezier(0.22, 1, 0.36, 1)` on `border-color`, `opacity` only. Under `prefers-reduced-motion: reduce`, no transitions. dnd-kit transform is the only movement.
+  - Browser surfaces: `::selection` background accent at 30% alpha; `caret-color: var(--accent)`; thin scrollbars tinted from `--border`; `:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }` on every focusable.
+  - States: hover = border to `--border-hover`; dragging = border `--accent`, no shadow; drop target = column border `--accent`, no fill; Done cards = text at 60% opacity, due label hidden; disabled buttons = 50% opacity, `cursor: default`.
+
 ## File Layout
 
 ```
@@ -67,10 +77,12 @@ app/
   api/tasks/route.ts
   api/tasks/[id]/route.ts
 components/
-  Board.tsx             client: fetch /api/board, DndContext, 4 columns, dialog state
-  Column.tsx            client: useDroppable
-  TaskCard.tsx          client: useDraggable
-  TaskDialog.tsx        client: create/edit form with status select + delete
+  Board.tsx             client: board state (optimistic), DndContext + sensors, header, dialog target
+  Column.tsx            client: useDroppable, sticky label, internal scroll, QuickAdd row
+  QuickAdd.tsx          client: inline title input, Enter saves into its column
+  TaskCard.tsx          client: useDraggable, title button, due label
+  TaskDialog.tsx        client: edit form (title, due, note, status), two-step delete
+  useBoard.ts           client: fetch/refetch/optimistic mutations hook
 lib/
   db.ts                 Prisma client singleton
   week.ts               TIMEZONE, currentWeekStart, weekRange, todayYmd, dateToYmd, ymdToDate
@@ -101,6 +113,8 @@ package.json, tsconfig.json, next.config.ts
 | 3 | Rollover, reminders, scheduler, instrumentation | executor (opus) | in place | reviewer (sonnet) |
 | 4 | Board UI with dnd-kit | executor (opus) | in place | reviewer (sonnet) |
 | 5 | Docker, compose, env example, README; end-to-end boot + persistence check | executor (opus) | in place | reviewer (sonnet) |
+| 6 | `rolledBackAt` field: migration, rollover sets it, status change clears it, DTO exposes it | executor (opus) | in place | reviewer (sonnet) |
+| 7 | UI design pass: tokens, hierarchy, states, quick-add, optimistic moves, keyboard/touch/SR, responsive | executor (opus) | in place | reviewer (sonnet) |
 
 Tasks run sequentially on branch `feat/weekly-kanban`. Final whole-branch review: final-reviewer (opus).
 
@@ -221,3 +235,179 @@ Tasks run sequentially on branch `feat/weekly-kanban`. Final whole-branch review
 4. Confirm `.gitignore` already covers `.env`, `node_modules`, `.next` (it does; do not duplicate).
 
 **Commit:** `feat: docker compose deployment and README`
+
+## Task 6: `rolledBackAt` field (data for the Monday cue)
+
+**Goal:** The board can tell which Backlog tasks the weekly rollover just returned, exactly, without heuristics.
+
+**Depends on:** Tasks 1–3.
+
+**Steps:**
+
+1. `prisma/schema.prisma`: add `rolledBackAt DateTime? @db.Date` to `Task` (the Monday of the week the task was rolled back into). Generate a migration named `rolled_back_at` against the throwaway Postgres (same procedure as Task 1 step 6: container `wt-pg`, host port 5433, `npx prisma migrate dev --name rolled_back_at`, then `docker rm -f wt-pg`). Commit `prisma/migrations/**`.
+2. `lib/rollover.ts`: the non-DONE `updateMany` also sets `rolledBackAt: ymdToDate(currentWeekStart(now))`. The DONE/archive call is unchanged.
+3. `lib/tasks.ts`: `TaskDto` gains `rolledBackAt: string | null` (via `dateToYmd`). `updateTask`: whenever `status` is present in the input, also set `rolledBackAt: null`. `createTask` leaves it null. Board ordering: Backlog cards with `rolledBackAt` equal to the current week start sort first; implement as `orderBy: [{ rolledBackAt: { sort: "desc", nulls: "last" } }, { dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }]`.
+4. Manual verification against the live DB (record commands and output): insert a row `status='IN_PROGRESS', weekOf='2026-10-19'`, start `npm run dev`, hit `/api/board`: the row is now `BACKLOG`, `weekOf` null, `rolledBackAt` = current Monday, and appears first in the response. `PATCH` it to `THIS_WEEK`: `rolledBackAt` is null. `PATCH` only `{ "title": "x" }` on a rolled-back row: `rolledBackAt` unchanged.
+5. `npx tsc --noEmit`, `npm test`, `npm run build` pass.
+
+**Commit:** `feat: track rolledBackAt for the Monday rollover cue`
+
+## Task 7: UI design pass
+
+**Goal:** Apply every design decision from the 2026-10-31 design review (D3–D20 below) to the board. The spec's feature set is unchanged; this task changes how the existing features look and respond.
+
+**Depends on:** Tasks 4 and 6.
+
+**Decisions to implement (each is binding):**
+
+- **D3 Header:** the h1 is `formatWeekRange(week)` at 15px/500. App name appears only in `<title>`. No header button. When `N > 0` Backlog cards have `rolledBackAt === week.start`, a second muted line reads `N back from last week` (singular `1 back from last week`).
+- **D4 Columns:** desktop grid `0.8fr 1fr 1fr 0.8fr`, gap 16px. 600–900px: two-by-two grid in order This week, In progress, Backlog, Done. Under 600px: single column in order In progress, This week, Done, Backlog, page padding 16px. Use CSS `order` so the DOM order stays Backlog, This week, In progress, Done.
+- **D5 Cards:** title (14px/500) and, when present, a due label on the next row at 12px. No note preview; a note is indicated by a muted `·` glyph after the due label (or alone when no due date) with `aria-label="has note"`. Done cards at 60% text opacity with the due label hidden.
+- **D6 Board states:** loading = four column shells with two placeholder bars each (`--border` at 50% alpha, 12px tall), no text. Empty column = muted `nothing here`. Fetch failure = one line under the header, `couldn't load the board · retry`, where `retry` is a text button; `aria-live="polite"`.
+- **D7 Optimistic:** `useBoard.ts` holds `tasks` in state. Drop → move the card locally, `PATCH { status }`; on failure restore the previous array and show `couldn't save · retry` under the header (retry re-sends the same PATCH). Quick-add → insert a temporary card (id `tmp-<uuid>`, 60% opacity) and replace it with the server DTO; on failure remove it and show the error line. Dialog Save/Delete disabled while in flight with labels `saving…` / `deleting…`. No full reload after mutations; `reload()` exists only for the error-line retry and D11.
+- **D8 Delete:** in the dialog, `Delete` becomes `Delete? yes` on first click and reverts after 3s if not clicked again; second click deletes and closes.
+- **D9 Signals:** due label text: `due Thu` when the due date falls inside the current week and is after today, `due Nov 12` when outside the week, `today` (accent) when equal to `todayYmd()`, `overdue · Oct 29` (accent) when before today. Never color alone. Hover/drag/drop borders per the token block; no shadows, no fills.
+- **D10 Monday cue:** rolled-back cards (`rolledBackAt === week.start`) render first in Backlog with a muted `last week` tag after the title row. Server ordering from Task 6 already puts them first; the client does not re-sort.
+- **D11 Stale tab:** `useBoard.ts` refetches on `visibilitychange` (visible) and `focus`, and checks `todayYmd()` every 60s; when the day changes, re-render (and refetch if the week changed). `todayYmd()` is computed per render, not memoized at mount.
+- **D12 Type:** `app/layout.tsx` loads Geist Sans with `next/font/google` (`{ subsets: ["latin"], display: "swap", variable: "--font-sans" }`) and sets it on `<html>`. `globals.css` uses `var(--font-sans), system-ui, sans-serif`.
+- **D13 Quick-add:** each column ends with a `QuickAdd` row: a muted `+ add` button that turns into a single text input (placeholder `title`), Enter saves `POST /api/tasks { title, status: <column> }`, Esc or blur-with-empty cancels. The dialog is edit-only; `TaskDialog` no longer has a create mode.
+- **D14 Tokens:** implement the Global Constraints token block verbatim. `globals.css` is the only stylesheet.
+- **D15 Keyboard:** add `KeyboardSensor` with `sortableKeyboardCoordinates` replaced by a custom coordinate getter that moves the active card to the adjacent column on ArrowLeft/ArrowRight (Space picks up and drops, Esc cancels). The card title is a `<button type="button">` that opens the dialog on click/Enter/Space; the card root carries the drag listeners. `:focus-visible` ring per tokens on every focusable.
+- **D16 Touch:** add `TouchSensor` with `activationConstraint: { delay: 250, tolerance: 8 }`; remove `touch-action: none`. Buttons, the quick-add row and the card title button have `min-height: 44px` on pointer-coarse devices (`@media (pointer: coarse)`).
+- **D17 Screen readers:** `DndContext` `accessibility.announcements` produce `Picked up "<title>".`, `"<title>" is over <Column label>.`, `"<title>" moved to <Column label>.`, `Move cancelled.` Each column is `<section aria-labelledby="<id of its h2>">`; the page body is `<main>`.
+- **D18 Titles:** card title `display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden` with the full title in `title=`. The dialog shows the full title.
+- **D19 Columns scroll:** `.board` is `height: calc(100dvh - header height)`; each column is a flex column with a sticky label row, a scrolling card list (`overflow-y: auto`, `flex: 1`), and the quick-add row pinned at the bottom. The droppable node is the whole column so empty space accepts drops. Under 600px the board reverts to page scroll (`height: auto`, column lists not scrollable).
+- **D20 Due dates:** any date allowed; labels per D9.
+
+**Steps:**
+
+1. Implement the above across `components/*`, `app/layout.tsx`, `app/page.tsx`, `app/globals.css`. Keep `Board.tsx` thin: state in `useBoard.ts`, rendering in components. `globals.css` may reach ~220 lines; keep it grouped by tokens → layout → column → card → quick-add → dialog → states.
+2. Remove dead code from Task 4: header button, create mode in the dialog, `.overdue` tint, `.is-over` fill, drag shadow.
+3. Verification (record in the report): with DB container up and `npm run dev` running, use the gstack `browse` skill if available (it was available to Task 4). Check in a 1440px viewport, dark: header shows only the week range; quick-add via Enter creates a card in that column instantly; drag moves a card with no snap-back; keyboard: Tab to a card, Enter opens dialog, Esc closes; Space + ArrowRight + Space moves it; two-step delete; a card with a past due date shows `overdue · <date>` in accent; Done card muted; resize to 800px shows the 2×2 grid, 500px the single column with In progress first. Insert a row with `rolledBackAt` = current Monday via SQL and confirm the header line `1 back from last week` and the `last week` tag. Confirm `prefers-reduced-motion` disables transitions (emulate in the browser if the skill supports it, otherwise state as unverified). `npx tsc --noEmit`, `npm test`, `npm run build` pass.
+
+**Commit(s):** `feat: board design pass (tokens, states, quick-add, optimistic moves, a11y)`; split into two commits (styles/tokens, then behaviour) if natural.
+
+## Design Review: Required Outputs (2026-10-31, /plan-design-review + /impeccable)
+
+### Interaction state table
+
+```
+FEATURE          | LOADING                    | EMPTY                | ERROR                              | SUCCESS                         | PARTIAL
+-----------------|----------------------------|----------------------|------------------------------------|---------------------------------|------------------------------
+Board load       | 4 column shells, 2 bars    | columns: nothing here| "couldn't load the board · retry"  | columns populated, header range | n/a
+Drag to column   | card moves instantly       | n/a                  | card returns; "couldn't save · retry" | card stays                   | n/a
+Quick-add        | temp card at 60% opacity   | input with "title"   | temp card removed; error line      | real card replaces temp         | n/a
+Edit dialog save | Save disabled, "saving…"   | n/a                  | server error string under form     | dialog closes, card updates     | n/a
+Delete           | "deleting…"                | n/a                  | error string under form            | dialog closes, card gone        | first click: "Delete? yes" 3s
+Monday cue       | n/a                        | no line              | n/a                                | "N back from last week" + tags  | n/a
+```
+
+### Journey storyboard
+
+```
+STEP | USER DOES                          | USER FEELS            | PLAN SPECIFIES?
+-----|------------------------------------|-----------------------|-----------------------------------------------
+1    | Opens board Monday evening         | oriented              | D3 week range h1; D10 "N back from last week"
+2    | Triages rolled-back cards          | in control            | D10 tags + first in Backlog; drag/keyboard moves (D7, D15)
+3    | Captures new items quickly         | unobstructed          | D13 quick-add, Enter to save
+4    | Mid-week: moves work, checks due   | calm, informed        | D9 due labels; D7 instant moves; D19 week columns always visible
+5    | Thursday: something overdue        | nudged, not nagged    | D9 "overdue · Oct 29" in accent, text not color alone
+6    | Sunday night, tab left open        | trusts the board      | D11 refetch on focus / day change
+7    | Months in                          | board disappears      | D14 tokens, no decoration; Done archived by rollover
+```
+
+### NOT in scope
+- Undo after delete (two-step confirm chosen instead; undo needs a pending-delete state and timer).
+- Reordering within a column (spec excludes it).
+- Light theme / theme toggle (scene is evening; a toggle is a settings surface the spec forbids).
+- Filters, search, tags, counts beyond the column header.
+- Visual mockups (gstack designer needs an OpenAI API key; none configured) and Codex outside voice (ChatGPT-account Codex rejects the configured models).
+
+### What already exists
+- `lib/week.ts` helpers (client-safe) for all date labels.
+- dnd-kit `DndContext`/`useDraggable`/`useDroppable` wiring from Task 4; sensors and announcements extend it.
+- Native `<dialog>` from Task 4 stays as the edit surface.
+- API contract unchanged except the additive `rolledBackAt` DTO field (Task 6).
+
+### TODOS.md updates
+None proposed: every finding was accepted into Tasks 6–7.
+
+## Implementation Tasks
+Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship.
+
+- [ ] **T1 (P1, human: ~2h / CC: ~10min)** — data — Add `rolledBackAt`, set in rollover, clear on status change, expose in DTO, order Backlog by it
+  - Surfaced by: Pass 3 — D10/D10b Monday cue needs an exact signal
+  - Files: prisma/schema.prisma, prisma/migrations/*, lib/rollover.ts, lib/tasks.ts
+  - Verify: Task 6 step 4 curl sequence
+- [ ] **T2 (P1, human: ~1d / CC: ~30min)** — styles — Implement the token block (dark palette, Geist, spacing, radius, motion, browser surfaces, focus ring)
+  - Surfaced by: Pass 5 — D14; Pass 4 — D12
+  - Files: app/globals.css, app/layout.tsx
+  - Verify: computed styles in browser; contrast of --muted and --accent on --card ≥ 4.5:1
+- [ ] **T3 (P1, human: ~1d / CC: ~30min)** — Board/useBoard — Optimistic moves with rollback, loading skeleton, error line with retry, refetch on focus/day change
+  - Surfaced by: Pass 2 — D6, D7; Pass 3 — D11
+  - Files: components/useBoard.ts, components/Board.tsx
+  - Verify: Task 7 step 3 browser checks
+- [ ] **T4 (P1, human: ~4h / CC: ~15min)** — Column/QuickAdd — Inline quick-add per column; remove header button and dialog create mode
+  - Surfaced by: Pass 4 — D13 modal-by-default
+  - Files: components/QuickAdd.tsx, components/Column.tsx, components/TaskDialog.tsx
+  - Verify: Enter creates in the right column; Esc cancels
+- [ ] **T5 (P1, human: ~4h / CC: ~15min)** — TaskCard/TaskDialog — Header hierarchy, card density, due labels, Done muting, 2-line clamp, two-step delete, in-flight disabling
+  - Surfaced by: Pass 1 — D3, D5; Pass 2 — D8, D9; Pass 7 — D18, D20
+  - Files: components/Board.tsx, components/TaskCard.tsx, components/TaskDialog.tsx
+  - Verify: Task 7 step 3 browser checks
+- [ ] **T6 (P1, human: ~1d / CC: ~30min)** — a11y — KeyboardSensor with column-step coordinates, title button, TouchSensor, 44px targets, announcements, landmarks
+  - Surfaced by: Pass 6 — D15, D16, D17
+  - Files: components/Board.tsx, components/TaskCard.tsx, components/Column.tsx, app/globals.css
+  - Verify: keyboard move sequence; VoiceOver/NVDA spot check or announcement strings in DOM live region
+- [ ] **T7 (P2, human: ~4h / CC: ~15min)** — layout — Column weights, 2×2 tablet grid, <600 order, viewport-height board with internal column scroll, full-column drop zone
+  - Surfaced by: Pass 1 — D4; Pass 6 — D16; Pass 7 — D19
+  - Files: app/globals.css, components/Column.tsx
+  - Verify: 1440 / 800 / 500px viewports
+
+_No new tasks from Pass 4 beyond T2/T4 (palette and modal)._
+
+## Design Review Completion Summary
+
+```
+  +====================================================================+
+  |         DESIGN PLAN REVIEW — COMPLETION SUMMARY                    |
+  +====================================================================+
+  | System Audit         | no DESIGN.md (now seeded); UI scope Task 4  |
+  | Step 0               | 4/10; all 7 passes                          |
+  | Pass 1  (Info Arch)  | 4/10 → 9/10 after fixes                     |
+  | Pass 2  (States)     | 3/10 → 9/10 after fixes                     |
+  | Pass 3  (Journey)    | 3/10 → 9/10 after fixes                     |
+  | Pass 4  (AI Slop)    | 5/10 → 8/10 after fixes (no mockups to grade)|
+  | Pass 5  (Design Sys) | 2/10 → 9/10 after fixes                     |
+  | Pass 6  (Responsive) | 2/10 → 9/10 after fixes                     |
+  | Pass 7  (Decisions)  | 3 resolved (D18–D20), 0 deferred            |
+  +--------------------------------------------------------------------+
+  | NOT in scope         | written (5 items)                           |
+  | What already exists  | written                                     |
+  | TODOS.md updates     | 0 items proposed                            |
+  | Approved Mockups     | 0 generated, 0 approved (designer no API key)|
+  | Decisions made       | 19 added to plan (D3–D20 incl. D10b)        |
+  | Decisions deferred   | 0                                           |
+  | Overall design score | 2/10 → 8/10                                 |
+  +====================================================================+
+```
+
+Pass 4 stays at 8 because no rendered surface or mockup could be graded against the slop blacklist; `/design-review` after Task 7 closes that gap.
+
+### Unresolved Decisions
+None.
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Outside Review | codex (design phase) via `/plan-design-review` | Independent 2nd opinion | 1 | unavailable | model_not_found on ChatGPT account (gpt-6-astra, gpt-5.5) |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | — |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | clean | score: 2/10 → 8/10, 19 decisions |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **OUTSIDE COVERAGE:** provider codex, phase design, status unavailable (two attempts, `model_not_found`); native Claude subagent review completed (20 findings, all folded into D3–D20). Missing outside coverage is recorded, not inferred clean.
+- **VERDICT:** DESIGN CLEARED — eng review required.
+
+NO UNRESOLVED DECISIONS
