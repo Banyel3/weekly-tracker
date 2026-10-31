@@ -1,82 +1,92 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import type { TaskDto } from "@/lib/tasks";
-import { formatWeekRange, type WeekRange } from "@/lib/week";
+import { formatWeekRange } from "@/lib/week";
 import { Column } from "./Column";
-import { TaskDialog, type DialogState, type StatusOption } from "./TaskDialog";
+import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
+import { CardPreview } from "./TaskCard";
+import { TaskDialog } from "./TaskDialog";
+import { useBoard } from "./useBoard";
 
-type Status = TaskDto["status"];
-type BoardData = { week: WeekRange; tasks: TaskDto[] };
-
-const COLUMNS: StatusOption[] = [
-  { status: "BACKLOG", label: "Backlog" },
-  { status: "THIS_WEEK", label: "This Week" },
-  { status: "IN_PROGRESS", label: "In Progress" },
-  { status: "DONE", label: "Done" },
-];
+const ERROR_TEXT = { load: "couldn't load the board", save: "couldn't save" };
 
 export function Board() {
-  const [data, setData] = useState<BoardData | null>(null);
-  const [dialog, setDialog] = useState<DialogState | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const board = useBoard();
+  const { week, tasks } = board;
+  const [editing, setEditing] = useState<TaskDto | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: columnCoordinates, keyboardCodes: KEYBOARD_CODES }),
+  );
 
-  const reload = useCallback(async () => {
-    const res = await fetch("/api/board", { cache: "no-store" });
-    if (res.ok) setData(await res.json());
-  }, []);
+  const active = tasks.find((t) => t.id === activeId) ?? null;
+  const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
 
-  useEffect(() => {
-    reload();
-  }, [reload]);
+  function onDragStart({ active }: DragStartEvent) {
+    setActiveId(String(active.id));
+  }
 
-  async function onDragEnd({ active, over }: DragEndEvent) {
-    if (!over || !data) return;
-    const task = data.tasks.find((t) => t.id === active.id);
-    const status = over.id as Status;
-    if (!task || task.status === status) return;
-    await fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    await reload();
+  function onDragEnd({ active, over }: DragEndEvent) {
+    setActiveId(null);
+    const task = tasks.find((t) => t.id === active.id);
+    const to = over?.id as Status | undefined;
+    if (task && to && task.status !== to) board.moveTask(task, to);
   }
 
   return (
     <main className="app">
       <header className="app-header">
-        <div>
-          <h1>Weekly Tracker</h1>
-          {data && <p className="week-range">{formatWeekRange(data.week)}</p>}
-        </div>
-        <button type="button" className="primary" onClick={() => setDialog({ mode: "create" })}>
-          + New task
-        </button>
+        {week && <h1>{formatWeekRange(week)}</h1>}
+        {rolledBack > 0 && <p className="rollover-line">{rolledBack} back from last week</p>}
       </header>
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="status-line" aria-live="polite">
+        {board.error && (
+          <p>
+            {ERROR_TEXT[board.error]} ·{" "}
+            <button type="button" className="text-button" onClick={board.retry}>
+              retry
+            </button>
+          </p>
+        )}
+      </div>
+      <DndContext
+        sensors={sensors}
+        accessibility={{ announcements, screenReaderInstructions: SCREEN_READER_INSTRUCTIONS }}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
         <div className="board">
           {COLUMNS.map(({ status, label }) => (
             <Column
               key={status}
               status={status}
               label={label}
-              tasks={data?.tasks.filter((t) => t.status === status) ?? []}
-              onOpen={(task) => setDialog({ mode: "edit", task })}
+              week={week}
+              tasks={tasks.filter((t) => t.status === status)}
+              loading={board.status === "loading"}
+              onOpen={setEditing}
+              onAdd={board.addTask}
             />
           ))}
         </div>
+        <DragOverlay dropAnimation={null}>{active && week && <CardPreview task={active} week={week} />}</DragOverlay>
       </DndContext>
-      <TaskDialog
-        state={dialog}
-        statuses={COLUMNS}
-        onClose={() => setDialog(null)}
-        onSaved={async () => {
-          setDialog(null);
-          await reload();
-        }}
-      />
+      <TaskDialog task={editing} onClose={() => setEditing(null)} onSave={board.updateTask} onDelete={board.removeTask} />
     </main>
   );
 }
