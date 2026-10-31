@@ -10,7 +10,7 @@ One person: the owner, self-hosting this board on their own machine. They open i
 
 ## Product Purpose
 
-A weekly to-do kanban with four columns: Backlog, This Week, In Progress, Done. The week is the unit of planning. Every Monday at 00:00 Asia/Manila the board resets itself: unfinished work falls back to Backlog, finished work is archived. The owner should be able to glance at the board and know, in under two seconds, what is due, what is in motion, and what is left this week. Success is a board that is opened daily, touched briefly, and never fought with.
+A weekly to-do kanban with four columns: Backlog, This Week, In Progress, Done. The week is the unit of planning. Every Monday at 00:00 Asia/Manila the board resets itself: unfinished work falls back to Backlog, finished work is archived. Each card can belong to one project, shown as a small colored chip, so the owner can tell at a glance which part of life a task belongs to. The owner should be able to glance at the board and know, in under two seconds, what is due, what is in motion, and what is left this week. Success is a board that is opened daily, touched briefly, and never fought with.
 
 ## Brand Personality
 
@@ -29,7 +29,7 @@ Quiet, precise, personal. The interface should feel like a well-kept notebook ra
 2. **Quiet by default, loud only for time.** The single accent is reserved for what is overdue or active; everything else is tinted neutral.
 3. **Fast beats pretty.** Every interaction is immediate; drag, drop, edit, delete happen without waiting for choreography. Motion only confirms state.
 4. **Evening-first.** Designed for a dim room: low-glare surfaces, restrained contrast between layers, no pure white or pure black anywhere.
-5. **Nothing extra.** No settings, no filters, no tags. If a control does not move a card or change its three fields, it does not exist.
+5. **Nothing extra.** No settings, no filters, no tags. If a control does not move a card or change its five fields (title, project, due, note, status), it does not exist.
 
 ## Accessibility & Inclusion
 

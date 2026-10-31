@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -12,20 +12,19 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { TaskDto } from "@/lib/tasks";
 import { formatWeekRange } from "@/lib/week";
 import { Column } from "./Column";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { CardPreview } from "./TaskCard";
-import { TaskDialog } from "./TaskDialog";
-import { useBoard } from "./useBoard";
+import { TaskDialog, type DialogTarget } from "./TaskDialog";
+import { useBoard, type NewTask } from "./useBoard";
 
 const ERROR_TEXT = { load: "couldn't load the board", save: "couldn't save" };
 
 export function Board() {
   const board = useBoard();
-  const { week, tasks } = board;
-  const [editing, setEditing] = useState<TaskDto | null>(null);
+  const { week, projects, tasks } = board;
+  const [dialog, setDialog] = useState<DialogTarget | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -33,8 +32,21 @@ export function Board() {
     useSensor(KeyboardSensor, { coordinateGetter: columnCoordinates, keyboardCodes: KEYBOARD_CODES }),
   );
 
+  const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const projectOf = (projectId: string | null) => (projectId ? (projectsById.get(projectId) ?? null) : null);
   const active = tasks.find((t) => t.id === activeId) ?? null;
   const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
+
+  async function onSubmit(body: NewTask): Promise<string | null> {
+    if (!dialog) return null;
+    if (dialog.mode === "create") {
+      board.addTask(body);
+      return null;
+    }
+    const { task } = dialog;
+    const { status, ...rest } = body;
+    return board.updateTask(task.id, status === task.status ? rest : body);
+  }
 
   function onDragStart({ active }: DragStartEvent) {
     setActiveId(String(active.id));
@@ -78,15 +90,25 @@ export function Board() {
               label={label}
               week={week}
               tasks={tasks.filter((t) => t.status === status)}
+              projectOf={projectOf}
               loading={board.status === "loading"}
-              onOpen={setEditing}
-              onAdd={board.addTask}
+              onOpen={(task) => setDialog({ mode: "edit", task })}
+              onAdd={(initialStatus) => setDialog({ mode: "create", initialStatus })}
             />
           ))}
         </div>
-        <DragOverlay dropAnimation={null}>{active && week && <CardPreview task={active} week={week} />}</DragOverlay>
+        <DragOverlay dropAnimation={null}>
+          {active && week && <CardPreview task={active} project={projectOf(active.projectId)} week={week} />}
+        </DragOverlay>
       </DndContext>
-      <TaskDialog task={editing} onClose={() => setEditing(null)} onSave={board.updateTask} onDelete={board.removeTask} />
+      <TaskDialog
+        target={dialog}
+        projects={projects}
+        onCreateProject={(name, color) => board.addProject({ name, color })}
+        onSubmit={onSubmit}
+        onDelete={board.removeTask}
+        onClose={() => setDialog(null)}
+      />
     </main>
   );
 }

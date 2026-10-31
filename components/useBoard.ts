@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
 
 type Status = TaskDto["status"];
-export type TaskPatch = Partial<Pick<TaskDto, "title" | "note" | "dueDate" | "status">>;
+export type TaskPatch = Partial<Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">>;
+export type NewTask = Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">;
+export type NewProject = { name: string; color: ProjectColor };
 export type LoadStatus = "loading" | "ready" | "error";
 export type BoardError = "load" | "save" | null;
 
@@ -29,6 +32,7 @@ async function errorText(res: Response | null): Promise<string> {
 
 export function useBoard() {
   const [week, setWeek] = useState<WeekRange | null>(null);
+  const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [tasks, setTasks] = useState<TaskDto[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<BoardError>(null);
@@ -48,8 +52,9 @@ export function useBoard() {
       setError("load");
       return;
     }
-    const data: { week: WeekRange; tasks: TaskDto[] } = await res.json();
+    const data: { week: WeekRange; projects: ProjectDto[]; tasks: TaskDto[] } = await res.json();
     setWeek(data.week);
+    setProjects(data.projects);
     setTasks(data.tasks);
     setStatus("ready");
     setError((e) => (e === "load" ? null : e));
@@ -71,18 +76,14 @@ export function useBoard() {
     fail(() => moveTask(task, to));
   }, []);
 
-  const addTask = useCallback(async (title: string, to: Status) => {
+  const addTask = useCallback(async (body: NewTask) => {
     clearSaveError();
     const now = new Date().toISOString();
     const temp: TaskDto = {
+      ...body,
       id: tempId(),
-      title,
-      note: null,
-      dueDate: null,
-      status: to,
       weekOf: null,
       rolledBackAt: null,
-      projectId: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -90,14 +91,26 @@ export function useBoard() {
     const res = await send("/api/tasks", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ title, status: to }),
+      body: JSON.stringify(body),
     });
     if (res?.ok) {
       replace(temp.id, await res.json());
       return;
     }
     setTasks((ts) => ts.filter((t) => t.id !== temp.id));
-    fail(() => addTask(title, to));
+    fail(() => addTask(body));
+  }, []);
+
+  const addProject = useCallback(async (input: NewProject): Promise<ProjectDto> => {
+    const res = await send("/api/projects", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(input),
+    });
+    if (!res?.ok) throw new Error(await errorText(res));
+    const project: ProjectDto = await res.json();
+    setProjects((ps) => [...ps, project].sort((a, b) => a.name.localeCompare(b.name)));
+    return project;
   }, []);
 
   const updateTask = useCallback(async (id: string, patch: TaskPatch): Promise<string | null> => {
@@ -146,5 +159,5 @@ export function useBoard() {
     };
   }, [reload]);
 
-  return { week, tasks, status, error, reload, moveTask, addTask, updateTask, removeTask, retry };
+  return { week, projects, tasks, status, error, reload, moveTask, addTask, addProject, updateTask, removeTask, retry };
 }
