@@ -19,7 +19,7 @@ Visual reference the owner pointed at: the Synchro board on Dribbble (sidebar, c
 
 ## Non-goals (Phase 3 and later)
 
-Quick capture with inline parsing and keyboard shortcuts / command palette; recurring tasks; Telegram morning digest with buttons and `/add` `/today` `/week`; Someday/Maybe parking and backlog aging; waiting-for flag; estimates and capacity hints; calendar month view or iCal; light theme.
+Quick capture with inline parsing and keyboard shortcuts / command palette; recurring tasks; Telegram morning digest with buttons and `/add` `/today` `/week`; Someday/Maybe parking and backlog aging; waiting-for flag; estimates and capacity hints; iCal feed; light theme variants; Tailscale Funnel or any public exposure; auth. The sidebar shows the Phase 3 items as disabled entries so the shell is final now.
 
 ## Anti-goals
 
@@ -27,7 +27,7 @@ Team fields (assignees, comments), custom statuses or columns, nested subtasks (
 
 ## Constraints
 
-- Stack unchanged: Next.js 15 App Router, Prisma 6, Postgres 16, dnd-kit, node-cron, Docker Compose. No new runtime dependencies except what is named here (none expected).
+- Stack: Next.js 15 App Router, Prisma 6, Postgres 16, dnd-kit, node-cron, Docker Compose, plus the Phase 2 UI stack chosen on 2026-11-01: Tailwind v4 + shadcn/ui as the base; Magic UI (animated numbers, lists, bento), Aceternity UI (one or two accent effects only), Motion Primitives (general motion, built on `motion`), Origin UI event calendar (shadcn-based), Tremor (charts), tweakcn theme presets. Plain-CSS `globals.css` migrates to Tailwind + shadcn tokens in the first task; the existing design rules (no shadows beyond the preset's, 150ms ease-out, reduced motion, 44px targets, text-plus-color status) still bind.
 - Asia/Manila ISO weeks, Monday rollover, `dateToYmd` / `ymdToDate` wire format, all unchanged.
 - Scale target: 10–20 live tasks, 2–4 projects, a growing archive (hundreds of rows a year). No pagination on the board; the archive list is paginated by week.
 - Single user; no auth. Telegram stays optional and silent when unconfigured.
@@ -45,41 +45,58 @@ On `Project`: nothing new. Deleting a project uses the existing `SetNull` relati
 
 Migration name `phase2`. Existing rows get the defaults.
 
-## Layout
+## Layout (v2, approved on the canvas 2026-11-01)
+
+Reference canvas: https://claude.ai/artifact/C3Cn3c7q3mjexgM1M4MhPU (Main, Dialog, Review artboards). Visual references: Synchro board (dribbble 27058593) for structure, "Task Board in Dark Mode" (dribbble 25448854) for mood.
 
 Desktop (≥ 1100px):
 
 ```
-+------------+------------------------------------------------------+
-| sidebar    | week strip: Mon 26 · Tue 27 · Wed 28 · Thu 29 ...    |
-| 240px      +------------------------------------------------------+
-|            | Backlog ○ | This week ○ | In progress ○ | Done ○     |
-| Today      |  cards    |  cards      |  cards        |  cards     |
-|  overdue   |           |             |               |            |
-|  due today |           |             |               |            |
-|  in prog.  |           |             |               |            |
-| Projects   |           |             |               |            |
-|  ● Home 2/5|           |             |               |            |
-|  ● Work 1/3|           |             |               |            |
-| Review →   |           |             |               |            |
-+------------+------------------------------------------------------+
++------------+------------------------------------------------------------+
+| sidebar    | [This week ring 3/10] [Finished per day ▁▃▁▁▃▁▂] [WIP 4/3 · Overdue 1]
+| 240px      +------------------------------------------------------------+
+| OVERVIEW   | Week calendar: MON 26 | TUE 27 | ... | SAT 31 (today) | SUN 1 |
+|  Board     |   event chips by due date, project-colored, drag to move   |
+|  Calendar  +------------------------------------------------------------+
+|  Review  2 | Board · undo line · search · archive link                 |
+|  Archive   | Backlog ○ | This week ○ | In progress ○ | Done ○           |
+| TOOLS·P3   |  cards (compact)                                           |
+|  (disabled)|                                                            |
+| Projects   |                                                            |
+| Theme ▾    |                                                            |
++------------+------------------------------------------------------------+
 ```
 
-- The header line (week range, "N back from last week") moves to the top of the sidebar. The board region fills the rest of the viewport; columns scroll internally as today.
-- 900–1100px: sidebar narrows to 200px, project progress bars hide (counts stay).
-- Under 900px: sidebar becomes a collapsible panel above the strip (Today counts and project chips in one row; tap expands). Strip scrolls horizontally. Board stacks as today.
+The board is about a third of the viewport height; the stats row and the week calendar take the rest. Under 1100px the stats row wraps to 2+1, the calendar scrolls horizontally, the board stacks as today. Under 900px the sidebar collapses to a top bar with a menu button.
 
-### Sidebar
+### Sidebar (navigation, not a task list)
 
-- **Today**: three short lists, each a heading with count: Overdue (due before today, not Done, not archived), Due today, In progress. Items show priority dot, title, project dot. Clicking opens the task dialog. Empty sections collapse to the heading with `0`. Hidden entirely only when all three are empty, replaced by one muted line `nothing due today`.
-- **Projects**: each row is a color dot, name, and `done/total` for tasks with `weekOf` = current week (Backlog tasks do not count); a thin 2px progress bar under the name in the project color. Clicking a row toggles the board's project filter (row gets a selected background; a `clear` text button appears at the top of the board). A `…` button per row opens a small inline menu: Rename, Recolor (the eight swatches), Delete (two-step, `Delete? yes`; tasks keep existing with no project). `+ project` at the bottom opens the same name + swatches form inline.
-- **Review →** link to `/review`. When the current week has rolled over tasks with `rolloverCount ≥ 2`, the link shows a small count badge in the accent color.
+- Header: week range (h1, 15/500) and the muted `N back from last week` line.
+- **Overview**: Board (count of live tasks), Calendar (scrolls to / focuses the calendar section), Weekly review (badge = Backlog tasks with `rolloverCount ≥ 2`), Archive (count). Current page highlighted with the theme's `accent` surface.
+- **Tools · Phase 3**: Inbox / quick capture, Recurring tasks, Telegram digest, Someday / maybe, Shortcuts ⌘K. Rendered as disabled buttons with a `soon` tag; no routes behind them. They exist so the shell does not change shape when Phase 3 lands.
+- **Projects**: each row is a color dot, name, `done/total` for `weekOf` = current week, and a 3px progress bar in the project color. Clicking toggles the board and calendar project filter. `…` menu: Rename, Recolor (eight swatches), Delete (deferred, undoable). `+ project` opens the inline name + swatches form.
+- Footer: `Theme · <preset> ▾` opens the theme picker (below).
 
-### Week strip
+### Stats row (Tremor)
 
-- Seven cells Monday to Sunday, each with weekday abbreviation, day number, and the count of tasks due that day (not archived, any status). Today's cell has an accent underline; past days are muted; a cell with overdue-and-not-done tasks shows the count in accent.
-- Clicking a cell toggles a day filter: the board shows only tasks due that day (all columns), the cell is selected, and the `clear` button appears. Only one of day filter, project filter and search is active at a time; activating one clears the others.
-- Keyboard: cells are buttons; arrow keys move between them.
+Three cards, left to right:
+1. **This week**: `ProgressCircle` with the percentage inside; `N of M finished`; `day d of 7 · on pace for K` where K = round(N / d × 7).
+2. **Finished per day**: a 7-bar `BarChart` of tasks whose `completedAt` falls on each of the last 7 days (Manila), today's bar in `primary`, zero days as a 2px baseline. Weekday initials under the bars.
+3. **In progress / Overdue**: two KPIs. In progress shows `n / limit` in the alert color when over, with the line `finish one before starting`; Overdue shows the count and `k carried over`.
+
+Numbers animate with Magic UI's number ticker on mount and on change; Motion Primitives handles the card entrance (one stagger, 150ms ease-out, none under reduced motion). The WIP card gets Aceternity's moving border only while over the limit.
+
+### Week calendar (shadcn-style event calendar, week view)
+
+- Origin UI's event calendar (shadcn-based) in week view, Monday to Sunday, all-day rows only (tasks have dates, not times). Each task with a due date appears as an event chip in its day: project-colored tint with a 3px edge, done tasks struck through at 55% opacity, overdue (past and not Done) with the alert-colored edge. Today's column is tinted and its date sits in a `primary` pill.
+- Drag a chip to another day → `PATCH { dueDate }` (optimistic, undoable). Click a chip → task dialog. Click a day header → day filter on the board (one filter at a time, as before). Week / Month toggle in the header; Month is the same component's month view, read-only except click-to-open.
+- Keyboard: day headers and chips are focusable; arrows move between chips, Enter opens.
+
+### Theme (tweakcn presets)
+
+- Themes are shadcn CSS-variable sets from tweakcn. Shipped presets: **Cosmic Night** (default), plus five more chosen at build time (candidates: Mocha Mousse, Catppuccin, Graphite, Northern Lights, Amethyst Haze). Each preset is a JSON of `--background … --chart-5 --sidebar-*` values stored under `themes/`; the picker in the sidebar footer swaps the `data-theme` attribute on `<html>` and saves the choice in `localStorage`. Dark mode only in Phase 2; light variants of presets are out of scope.
+- Geist stays the UI font regardless of the preset's `--font-sans`.
+- Semantic mapping on top of the preset: `primary` = interaction (focus ring, selected, today, In progress marker, buttons); `chart-5` (or the preset's warmest chart hue) = alert (overdue, today-due, urgent, WIP over limit); `chart-3/4` and friends = project palette defaults; `destructive` only for the confirm-free delete's undo line emphasis. Project colors are stored as keys and resolved per theme so they always read against the current surfaces.
 
 ### Board changes
 
@@ -131,6 +148,19 @@ Priority first (urgent, high, none), then the existing rules (rolled-back first 
 
 - Rollover: the non-Done `updateMany` also does `rolloverCount: { increment: 1 }`; the Done/archive call sets nothing new (`completedAt` already set when the task became Done).
 - New cron `0 18 * * 5` Asia/Manila → `sendWeeklySummary()`, registered under the same Telegram guard as the reminder.
+
+## Deployment: laptop server on the tailnet
+
+The app will move from this machine to a laptop that stays on and is reached over Tailscale. Phase 2 prepares for that without changing the one-command promise.
+
+- **Binding**: compose publishes the app on `127.0.0.1:3000:3000` (loopback only) so nothing is exposed on the LAN; Tailscale provides the reachable endpoint. The db port mapping (`5433`) becomes optional via a `docker-compose.dev.yml` override, not published by default.
+- **HTTPS and hostname**: the host runs the Tailscale client; `tailscale serve --bg 3000` (one command, documented in the README) gives `https://<laptop>.<tailnet>.ts.net` with managed certificates. Secure context matters: `crypto.randomUUID`, clipboard and service-worker APIs need it. No Funnel (public exposure) by default.
+- **Trust boundary**: the tailnet is the login. No auth in the app. Optional later: read Tailscale's identity headers behind `tailscale serve` to show who is connected or restrict to one user.
+- **Restart and sleep**: `restart: unless-stopped` on both services (today only `app` has it); Docker Desktop or the Docker daemon set to start at boot, documented. Because a sleeping laptop misses the Monday 00:00 cron, the rollover also runs an idempotent hourly check (`0 * * * *`) in addition to the weekly cron and the startup catch-up; the Friday summary and the daily reminder stay single-shot crons but each also checks on startup whether its slot was missed today and sends once if so (guarded by a `lastSentOn` row in a small `AppState` table).
+- **Backups**: `scripts/backup.sh` runs `pg_dump` inside the db container to `./backups/weekly-tracker-<date>.sql.gz` and keeps 30 days; README documents a host cron line and the restore command. No cloud sync in scope.
+- **Health**: the app gets a `/api/health` route (DB ping, current week start, last rollover run) and a compose healthcheck on it; `docker compose ps` shows real health.
+- **Config**: `.env.example` gains `APP_TZ` (fixed to Asia/Manila, informational), `BACKUP_KEEP_DAYS=30`, and the Telegram variables as before. `NEXT_TELEMETRY_DISABLED=1` in the Dockerfile.
+- **Move procedure** (README): on the old machine `scripts/backup.sh`; on the laptop clone, copy `.env`, `docker compose up -d --build`, `scripts/restore.sh <file>`, `tailscale serve --bg 3000`. Image builds locally on the laptop, so CPU architecture does not matter.
 
 ## Calls I made (mark for the owner to check)
 
