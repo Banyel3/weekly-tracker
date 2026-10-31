@@ -1,5 +1,10 @@
 import { Board } from "@/components/Board";
 
 export default function Home() {
-  return <Board />;
+  return (
+    <>
+      <div id="cal" />
+      <Board />
+    </>
+  );
 }

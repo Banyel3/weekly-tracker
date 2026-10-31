@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
-import type { TaskDto } from "@/lib/tasks";
+import type { BoardCounts, BoardDto, TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
 
 type Status = TaskDto["status"];
 export type TaskPatch = Partial<Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">>;
 export type NewTask = Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">;
 export type NewProject = { name: string; color: ProjectColor };
+export type ProjectPatch = Partial<NewProject>;
 export type LoadStatus = "loading" | "ready" | "error";
 export type BoardError = "load" | "save" | null;
 
@@ -30,15 +31,24 @@ async function errorText(res: Response | null): Promise<string> {
   return body?.error ?? `request failed (${res.status})`;
 }
 
+function sortProjects(projects: ProjectDto[]): ProjectDto[] {
+  return [...projects].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function useBoard() {
   const [week, setWeek] = useState<WeekRange | null>(null);
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [tasks, setTasks] = useState<TaskDto[]>([]);
+  const [today, setToday] = useState<string | null>(null);
+  const [counts, setCounts] = useState<BoardCounts>({ live: 0, archived: 0, nudges: 0 });
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<BoardError>(null);
   const failed = useRef<(() => void) | null>(null);
+  const latest = useRef({ projects, tasks });
+  latest.current = { projects, tasks };
 
   const replace = (id: string, next: TaskDto) => setTasks((ts) => ts.map((t) => (t.id === id ? next : t)));
+  const bumpLive = (by: number) => setCounts((c) => ({ ...c, live: Math.max(0, c.live + by) }));
   const clearSaveError = () => setError((e) => (e === "save" ? null : e));
   const fail = (again: () => void) => {
     failed.current = again;
@@ -52,8 +62,10 @@ export function useBoard() {
       setError("load");
       return;
     }
-    const data: { week: WeekRange; projects: ProjectDto[]; tasks: TaskDto[] } = await res.json();
+    const data: BoardDto = await res.json();
     setWeek(data.week);
+    setToday(data.today);
+    setCounts(data.counts);
     setProjects(data.projects);
     setTasks(data.tasks);
     setStatus("ready");
@@ -93,6 +105,7 @@ export function useBoard() {
       updatedAt: now,
     };
     setTasks((ts) => [...ts, temp]);
+    bumpLive(1);
     const res = await send("/api/tasks", {
       method: "POST",
       headers: JSON_HEADERS,
@@ -103,6 +116,7 @@ export function useBoard() {
       return;
     }
     setTasks((ts) => ts.filter((t) => t.id !== temp.id));
+    bumpLive(-1);
     fail(() => addTask(body));
   }, []);
 
@@ -114,7 +128,7 @@ export function useBoard() {
     });
     if (!res?.ok) throw new Error(await errorText(res));
     const project: ProjectDto = await res.json();
-    setProjects((ps) => [...ps, project].sort((a, b) => a.name.localeCompare(b.name)));
+    setProjects((ps) => sortProjects([...ps, project]));
     return project;
   }, []);
 
@@ -133,7 +147,39 @@ export function useBoard() {
     const res = await send(`/api/tasks/${id}`, { method: "DELETE" });
     if (!res?.ok && res?.status !== 404) return errorText(res);
     setTasks((ts) => ts.filter((t) => t.id !== id));
+    if (res?.ok) bumpLive(-1);
     return null;
+  }, []);
+
+  const updateProject = useCallback(async (id: string, patch: ProjectPatch): Promise<string | null> => {
+    const previous = latest.current.projects.find((p) => p.id === id);
+    if (!previous) return null;
+    const put = (next: ProjectDto) => setProjects((ps) => sortProjects(ps.map((p) => (p.id === id ? next : p))));
+    put({ ...previous, ...patch });
+    const res = await send(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(patch),
+    });
+    if (res?.ok) {
+      put(await res.json());
+      return null;
+    }
+    put(previous);
+    return errorText(res);
+  }, []);
+
+  const removeProject = useCallback(async (id: string): Promise<string | null> => {
+    const removed = latest.current.projects.find((p) => p.id === id);
+    if (!removed) return null;
+    const orphaned = new Set(latest.current.tasks.filter((t) => t.projectId === id).map((t) => t.id));
+    setProjects((ps) => ps.filter((p) => p.id !== id));
+    setTasks((ts) => ts.map((t) => (orphaned.has(t.id) ? { ...t, projectId: null } : t)));
+    const res = await send(`/api/projects/${id}`, { method: "DELETE" });
+    if (res?.ok || res?.status === 404) return null;
+    setProjects((ps) => sortProjects([...ps, removed]));
+    setTasks((ts) => ts.map((t) => (orphaned.has(t.id) && t.projectId === null ? { ...t, projectId: id } : t)));
+    return errorText(res);
   }, []);
 
   const retry = useCallback(() => {
@@ -164,5 +210,24 @@ export function useBoard() {
     };
   }, [reload]);
 
-  return { week, projects, tasks, status, error, reload, moveTask, addTask, addProject, updateTask, removeTask, retry };
+  return {
+    week,
+    today,
+    counts,
+    projects,
+    tasks,
+    status,
+    error,
+    reload,
+    moveTask,
+    addTask,
+    addProject,
+    updateProject,
+    removeProject,
+    updateTask,
+    removeTask,
+    retry,
+  };
 }
+
+export type BoardState = ReturnType<typeof useBoard>;

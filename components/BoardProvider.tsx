@@ -1,0 +1,29 @@
+"use client";
+
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useBoard, type BoardState } from "./useBoard";
+import { FiltersContext, useFiltersState } from "./useFilters";
+
+const BoardContext = createContext<BoardState | null>(null);
+
+export function BoardProvider({ children }: { children: ReactNode }) {
+  const board = useBoard();
+  const filters = useFiltersState();
+  const pathname = usePathname();
+  const { clear } = filters;
+
+  useEffect(() => clear(), [pathname, clear]);
+
+  return (
+    <BoardContext.Provider value={board}>
+      <FiltersContext.Provider value={filters}>{children}</FiltersContext.Provider>
+    </BoardContext.Provider>
+  );
+}
+
+export function useBoardContext(): BoardState {
+  const value = useContext(BoardContext);
+  if (!value) throw new Error("useBoardContext must be used inside <BoardProvider>");
+  return value;
+}

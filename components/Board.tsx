@@ -12,18 +12,21 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { formatWeekRange } from "@/lib/week";
 import { Column } from "./Column";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { CardPreview } from "./TaskCard";
 import { TaskDialog, type DialogTarget } from "./TaskDialog";
-import { useBoard, type NewTask } from "./useBoard";
+import { useBoardContext } from "./BoardProvider";
+import type { NewTask } from "./useBoard";
+import { matchesFilter, useFilters } from "./useFilters";
 
 const ERROR_TEXT = { load: "couldn't load the board", save: "couldn't save" };
 
 export function Board() {
-  const board = useBoard();
+  const board = useBoardContext();
+  const { filter } = useFilters();
   const { week, projects, tasks } = board;
+  const visible = useMemo(() => tasks.filter((t) => matchesFilter(t, filter)), [tasks, filter]);
   const [dialog, setDialog] = useState<DialogTarget | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -35,7 +38,6 @@ export function Board() {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const projectOf = (projectId: string | null) => (projectId ? (projectsById.get(projectId) ?? null) : null);
   const active = tasks.find((t) => t.id === activeId) ?? null;
-  const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
 
   async function onSubmit(body: NewTask): Promise<string | null> {
     if (!dialog) return null;
@@ -60,11 +62,7 @@ export function Board() {
   }
 
   return (
-    <main className="app">
-      <header className="app-header">
-        {week && <h1>{formatWeekRange(week)}</h1>}
-        {rolledBack > 0 && <p className="rollover-line">{rolledBack} back from last week</p>}
-      </header>
+    <div className="app">
       <div className="status-line" aria-live="polite">
         {board.error && (
           <p>
@@ -89,7 +87,7 @@ export function Board() {
               status={status}
               label={label}
               week={week}
-              tasks={tasks.filter((t) => t.status === status)}
+              tasks={visible.filter((t) => t.status === status)}
               projectOf={projectOf}
               loading={board.status === "loading"}
               onOpen={(task) => setDialog({ mode: "edit", task })}
@@ -109,6 +107,6 @@ export function Board() {
         onDelete={board.removeTask}
         onClose={() => setDialog(null)}
       />
-    </main>
+    </div>
   );
 }

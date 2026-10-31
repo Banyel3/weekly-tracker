@@ -4,10 +4,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { COLUMNS, type Status } from "./dnd";
+import { ColorSwatches, colorVar } from "./ColorSwatches";
 import type { NewTask } from "./useBoard";
 
-/** Mirrors PROJECT_COLORS in lib/projects (not value-imported: that module pulls in Prisma). */
-const COLORS: readonly ProjectColor[] = ["rose", "amber", "lime", "teal", "sky", "violet", "pink", "slate"];
 const DEFAULT_COLOR: ProjectColor = "teal";
 const NO_PROJECT = "";
 const NEW_PROJECT = "__new__";
@@ -47,10 +46,6 @@ function formOf(target: DialogTarget | null): Form {
     note: task?.note ?? "",
     status: task?.status ?? (target?.mode === "create" ? target.initialStatus : "BACKLOG"),
   };
-}
-
-function colorVar(color: string): string {
-  return `var(--project-${color})`;
 }
 
 export function TaskDialog({ target, projects, onCreateProject, onSubmit, onDelete, onClose }: Props) {
@@ -195,23 +190,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onDele
                 onChange={(e) => set("newName", e.target.value)}
               />
             </label>
-            <fieldset className="swatches">
-              <legend>Color</legend>
-              {COLORS.map((color) => (
-                <label key={color} className="swatch">
-                  <input
-                    type="radio"
-                    name="project-color"
-                    className="visually-hidden"
-                    aria-label={color}
-                    value={color}
-                    checked={form.newColor === color}
-                    onChange={() => set("newColor", color)}
-                  />
-                  <span className="swatch-dot" style={{ background: colorVar(color) }} />
-                </label>
-              ))}
-            </fieldset>
+            <ColorSwatches value={form.newColor} onChange={(color) => set("newColor", color)} />
           </div>
         )}
         <label>
