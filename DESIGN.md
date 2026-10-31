@@ -70,6 +70,8 @@ A four-column weekly kanban for one person, used in the evening in a dim room. R
 
 Warm-tinted dark neutrals on a single hue (OKLCH hue 70, chroma 0.008–0.01). Four stacked surfaces: `{colors.bg}` page, `{colors.column}`, `{colors.card}`, and borders at `{colors.border}` rising to `{colors.border-hover}` on hover. Text `{colors.text}` and `{colors.muted}` (about 5.5:1 on a card). One accent, `{colors.accent}` (muted amber, about 6.7:1 on a card), used only for overdue and today due-labels, the In Progress column marker, focus rings, drag and drop borders, selection and caret. Never pure black or white. `color-scheme: dark` so native controls match.
 
+Project identity colors are separate from status: eight `--project-*` tokens (rose, amber, lime, teal, sky, violet, pink, slate; OKLCH L 0.72–0.78, chroma 0.02–0.14) appear only as the 8px chip dot on a card and as the swatches in the dialog, never on text, borders, or status signals. The single-accent rule above is unchanged.
+
 ## Typography
 
 Geist Sans, loaded with `next/font/google`, system sans fallback. One family, four roles: body 14/20, card title 14/500, labels 12/600 sentence case in muted, header 15/500. Counts and dates use `font-variant-numeric: tabular-nums`. Card titles clamp to two lines.
@@ -81,9 +83,9 @@ No shadows. Depth comes from the four surface steps and 1px borders. Dragging ra
 ## Components
 
 - **Card**: `{components.card}`, 1px `{colors.border}`, title plus optional due label. Done cards at 60% text opacity.
-- **Column**: `{components.column}`, sticky label row with count, internal scroll, quick-add row pinned at the bottom.
-- **Quick-add**: muted `+ add` text that becomes a single `{components.input}`; Enter saves, Esc cancels.
-- **Dialog**: native `<dialog>` on `{colors.column}` with 1px border; edit only; two-step delete.
+- **Column**: `{components.column}`, sticky label row with count, internal scroll, a muted `+ add` row pinned at the bottom that opens the create dialog with the column's status preset.
+- **Dialog**: native `<dialog>` on `{colors.column}` with 1px border; create and edit; fields Title, Project, Due date, Note, Status; the Project select offers `New project…`, which reveals a name input and the eight color swatches (24px, 44px on coarse pointers, selected swatch ringed in `{colors.text}`); two-step delete in edit mode.
+- **Chip**: 8px dot in the project's `--project-*` color plus the project name at 12px in `{colors.muted}`, first in the card's meta row; dims with Done cards.
 - **Buttons**: `{components.button-quiet}`; primary emphasis via weight 500, not color. Disabled at 50% opacity.
 
 ## Do's and Don'ts
@@ -92,5 +94,6 @@ No shadows. Depth comes from the four surface steps and 1px borders. Dragging ra
 - Do convey status in text as well as color (`overdue · Oct 29`).
 - Do keep 4px spacing steps and 6px/8px radii.
 - Don't add shadows, gradients, glass, icons, emoji, or colored left borders.
-- Don't introduce a second accent, uppercase labels, or a light theme.
+- Don't introduce a second status accent, uppercase labels, or a light theme. Project colors are identity only.
+- Don't open a modal for anything but creating or editing a task.
 - Don't open a modal for creation; the dialog is for editing.
