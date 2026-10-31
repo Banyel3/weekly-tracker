@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  BACKLOG
+  THIS_WEEK
+  IN_PROGRESS
+  DONE
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  note      String?
+  dueDate   DateTime? @db.Date
+  status    Status    @default(BACKLOG)
+  weekOf    DateTime? @db.Date
+  archived  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
