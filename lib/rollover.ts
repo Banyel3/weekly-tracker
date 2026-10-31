@@ -5,7 +5,8 @@ import { currentWeekStart, ymdToDate } from "./week";
 export async function rolloverStaleTasks(
   now: Date = new Date(),
 ): Promise<{ archived: number; returnedToBacklog: number }> {
-  const stale = { archived: false, weekOf: { lt: ymdToDate(currentWeekStart(now)) } };
+  const weekStart = ymdToDate(currentWeekStart(now));
+  const stale = { archived: false, weekOf: { lt: weekStart } };
 
   const archived = await prisma.task.updateMany({
     where: { ...stale, status: Status.DONE },
@@ -13,7 +14,7 @@ export async function rolloverStaleTasks(
   });
   const returned = await prisma.task.updateMany({
     where: { ...stale, status: { not: Status.DONE } },
-    data: { status: Status.BACKLOG, weekOf: null },
+    data: { status: Status.BACKLOG, weekOf: null, rolledBackAt: weekStart },
   });
 
   console.log(`[rollover] archived=${archived.count} backlog=${returned.count}`);

@@ -15,13 +15,14 @@ enum Status {
 }
 
 model Task {
-  id        String    @id @default(cuid())
-  title     String
-  note      String?
-  dueDate   DateTime? @db.Date
-  status    Status    @default(BACKLOG)
-  weekOf    DateTime? @db.Date
-  archived  Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  title        String
+  note         String?
+  dueDate      DateTime? @db.Date
+  status       Status    @default(BACKLOG)
+  weekOf       DateTime? @db.Date
+  archived     Boolean   @default(false)
+  rolledBackAt DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }

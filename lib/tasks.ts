@@ -24,6 +24,7 @@ export type TaskDto = {
   dueDate: string | null;
   status: Status;
   weekOf: string | null;
+  rolledBackAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,6 +37,7 @@ export function toDto(task: Task): TaskDto {
     dueDate: task.dueDate ? dateToYmd(task.dueDate) : null,
     status: task.status,
     weekOf: task.weekOf ? dateToYmd(task.weekOf) : null,
+    rolledBackAt: task.rolledBackAt ? dateToYmd(task.rolledBackAt) : null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
@@ -53,7 +55,11 @@ export async function listBoard(now?: Date): Promise<{ week: WeekRange; tasks: T
   const week = weekRange(now);
   const tasks = await prisma.task.findMany({
     where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
-    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+    orderBy: [
+      { rolledBackAt: { sort: "desc", nulls: "last" } },
+      { dueDate: { sort: "asc", nulls: "last" } },
+      { createdAt: "asc" },
+    ],
   });
   return { week, tasks: tasks.map(toDto) };
 }
@@ -80,7 +86,11 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       title: input.title,
       note: input.note,
       dueDate: optionalDate(input.dueDate),
-      ...(input.status !== undefined && { status: input.status, weekOf: weekOfFor(input.status) }),
+      ...(input.status !== undefined && {
+        status: input.status,
+        weekOf: weekOfFor(input.status),
+        rolledBackAt: null,
+      }),
     },
   });
   return toDto(task);
