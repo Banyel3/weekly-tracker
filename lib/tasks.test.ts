@@ -1,5 +1,6 @@
+import type { Task } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { createTaskSchema, sortColumn, updateTaskSchema, type TaskDto } from "./tasks";
+import { createTaskSchema, sortColumn, updateData, updateTaskSchema, type TaskDto } from "./tasks";
 
 const WEEK = "2026-10-26";
 
@@ -74,5 +75,50 @@ describe("task schemas", () => {
 
   it("rejects an unknown priority", () => {
     expect(updateTaskSchema.safeParse({ priority: "LOW" }).success).toBe(false);
+  });
+});
+
+describe("rolledBackAt on update", () => {
+  it("accepts a ymd or null and rejects other strings", () => {
+    expect(updateTaskSchema.parse({ rolledBackAt: "2026-10-26" })).toEqual({ rolledBackAt: "2026-10-26" });
+    expect(updateTaskSchema.parse({ rolledBackAt: null })).toEqual({ rolledBackAt: null });
+    expect(updateTaskSchema.safeParse({ rolledBackAt: "Oct 26" }).success).toBe(false);
+  });
+});
+
+describe("updateData", () => {
+  const now = new Date("2026-10-28T03:00:00.000Z");
+  const existing = {
+    status: "BACKLOG",
+    archived: false,
+    completedAt: null,
+  } as unknown as Task;
+
+  it("applies rolledBackAt after the status reset", () => {
+    const data = updateData({ status: "BACKLOG", rolledBackAt: WEEK }, existing, now);
+    expect(data.status).toBe("BACKLOG");
+    expect(data.rolledBackAt).toEqual(new Date(`${WEEK}T00:00:00.000Z`));
+  });
+
+  it("resets rolledBackAt when only status is sent", () => {
+    expect(updateData({ status: "THIS_WEEK" }, existing, now).rolledBackAt).toBeNull();
+  });
+
+  it("ignores archived false on a task that is not archived", () => {
+    const live = { ...existing, status: "DONE" } as unknown as Task;
+    const data = updateData({ archived: false }, live, now);
+    expect(data).not.toHaveProperty("archived");
+    expect(data).not.toHaveProperty("status");
+  });
+
+  it("restores an archived task to Backlog", () => {
+    const archived = { ...existing, status: "DONE", archived: true } as unknown as Task;
+    expect(updateData({ archived: false }, archived, now)).toMatchObject({
+      archived: false,
+      status: "BACKLOG",
+      weekOf: null,
+      completedAt: null,
+      rolledBackAt: null,
+    });
   });
 });

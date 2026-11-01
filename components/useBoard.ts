@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
+import { localId } from "@/lib/localId";
 import type { BoardCounts, BoardDto, TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
+import { COLUMNS } from "./board/dnd";
+import { deletedLabel, movedLabel, type UndoSlot } from "./useUndo";
 
 type Status = TaskDto["status"];
-export type TaskPatch = Partial<Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">>;
-export type NewTask = Pick<TaskDto, "title" | "note" | "dueDate" | "status" | "projectId">;
+type Editable = "title" | "note" | "dueDate" | "status" | "projectId" | "priority" | "checklist";
+export type TaskPatch = Partial<Pick<TaskDto, Editable | "rolledBackAt">>;
+export type NewTask = Pick<TaskDto, Editable>;
 export type NewProject = { name: string; color: ProjectColor };
 export type ProjectPatch = Partial<NewProject>;
 /** retryable is false for 4xx answers (validation, duplicate name): resending the same request cannot succeed. */
@@ -17,14 +21,20 @@ export type BoardError = "load" | "save" | null;
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
-function tempId(): string {
-  const uuid =
-    typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `tmp-${uuid}`;
-}
-
 async function send(url: string, init: RequestInit): Promise<Response | null> {
   return fetch(url, init).catch(() => null);
+}
+
+/** keepalive lets a deferred delete flushed on pagehide outlive the page. */
+export function sendDelete(url: string): Promise<Response | null> {
+  return send(url, { method: "DELETE", keepalive: true });
+}
+
+const columnLabel = (status: Status) => COLUMNS.find((c) => c.status === status)?.label ?? status;
+
+function insertAt<T>(items: T[], index: number, item: T): T[] {
+  const i = Math.max(0, Math.min(index, items.length));
+  return [...items.slice(0, i), item, ...items.slice(i)];
 }
 
 async function projectFailure(res: Response | null): Promise<ProjectFailure> {
@@ -41,7 +51,7 @@ function sortProjects(projects: ProjectDto[]): ProjectDto[] {
   return [...projects].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function useBoard() {
+export function useBoard(register: UndoSlot["register"]) {
   const [week, setWeek] = useState<WeekRange | null>(null);
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [tasks, setTasks] = useState<TaskDto[]>([]);
@@ -50,6 +60,8 @@ export function useBoard() {
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<BoardError>(null);
   const failed = useRef<(() => void) | null>(null);
+  const hiddenTasks = useRef(new Set<string>());
+  const hiddenProjects = useRef(new Set<string>());
   const latest = useRef({ projects, tasks });
   latest.current = { projects, tasks };
 
@@ -72,38 +84,61 @@ export function useBoard() {
     setWeek(data.week);
     setToday(data.today);
     setCounts(data.counts);
-    setProjects(data.projects);
-    setTasks(data.tasks);
+    const goneProject = (id: string | null) => id !== null && hiddenProjects.current.has(id);
+    setProjects(data.projects.filter((p) => !goneProject(p.id)));
+    setTasks(
+      data.tasks
+        .filter((t) => !hiddenTasks.current.has(t.id))
+        .map((t) => (goneProject(t.projectId) ? { ...t, projectId: null } : t)),
+    );
     setStatus("ready");
     setError((e) => (e === "load" ? null : e));
   }, []);
 
-  const moveTask = useCallback(async (task: TaskDto, to: Status) => {
-    clearSaveError();
-    replace(task.id, { ...task, status: to, rolledBackAt: null });
-    const res = await send(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ status: to }),
-    });
-    if (res?.ok) {
-      replace(task.id, await res.json());
-      return;
-    }
-    replace(task.id, task);
-    fail(() => moveTask(task, to));
+  const patchTask = useCallback(async (id: string, patch: TaskPatch): Promise<Response | null> => {
+    return send(`/api/tasks/${id}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(patch) });
   }, []);
+
+  const undoMove = useCallback(
+    async (before: TaskDto, after: TaskDto) => {
+      clearSaveError();
+      replace(before.id, before);
+      const res = await patchTask(before.id, { status: before.status, rolledBackAt: before.rolledBackAt });
+      if (res?.ok) {
+        replace(before.id, await res.json());
+        return;
+      }
+      replace(before.id, after);
+      fail(() => undoMove(before, after));
+    },
+    [patchTask],
+  );
+
+  const moveTask = useCallback(
+    async (task: TaskDto, to: Status) => {
+      clearSaveError();
+      replace(task.id, { ...task, status: to, rolledBackAt: null });
+      const res = await patchTask(task.id, { status: to });
+      if (!res?.ok) {
+        replace(task.id, task);
+        fail(() => moveTask(task, to));
+        return;
+      }
+      const moved: TaskDto = await res.json();
+      replace(task.id, moved);
+      register({ label: movedLabel(task.title, columnLabel(to)), undo: () => undoMove(task, moved) });
+    },
+    [patchTask, undoMove, register],
+  );
 
   const addTask = useCallback(async (body: NewTask) => {
     clearSaveError();
     const now = new Date().toISOString();
     const temp: TaskDto = {
       ...body,
-      id: tempId(),
+      id: `tmp-${localId()}`,
       weekOf: null,
       rolledBackAt: null,
-      priority: "NONE",
-      checklist: [],
       rolloverCount: 0,
       completedAt: null,
       archived: false,
@@ -138,24 +173,44 @@ export function useBoard() {
     return project;
   }, []);
 
-  const updateTask = useCallback(async (id: string, patch: TaskPatch): Promise<string | null> => {
-    const res = await send(`/api/tasks/${id}`, {
-      method: "PATCH",
-      headers: JSON_HEADERS,
-      body: JSON.stringify(patch),
-    });
-    if (!res?.ok) return errorText(res);
-    replace(id, await res.json());
-    return null;
-  }, []);
+  const updateTask = useCallback(
+    async (id: string, patch: TaskPatch): Promise<string | null> => {
+      const res = await patchTask(id, patch);
+      if (!res?.ok) return errorText(res);
+      replace(id, await res.json());
+      return null;
+    },
+    [patchTask],
+  );
 
-  const removeTask = useCallback(async (id: string): Promise<string | null> => {
-    const res = await send(`/api/tasks/${id}`, { method: "DELETE" });
-    if (!res?.ok && res?.status !== 404) return errorText(res);
-    setTasks((ts) => ts.filter((t) => t.id !== id));
-    if (res?.ok) bumpLive(-1);
-    return null;
-  }, []);
+  const removeTask = useCallback(
+    (task: TaskDto) => {
+      const index = latest.current.tasks.findIndex((t) => t.id === task.id);
+      if (index < 0) return;
+      const restore = () => {
+        hiddenTasks.current.delete(task.id);
+        setTasks((ts) => (ts.some((t) => t.id === task.id) ? ts : insertAt(ts, index, task)));
+        bumpLive(1);
+      };
+      hiddenTasks.current.add(task.id);
+      setTasks((ts) => ts.filter((t) => t.id !== task.id));
+      bumpLive(-1);
+      register({
+        label: deletedLabel(task.title),
+        undo: restore,
+        commit: async () => {
+          const res = await sendDelete(`/api/tasks/${task.id}`);
+          if (res?.ok || res?.status === 404) {
+            hiddenTasks.current.delete(task.id);
+            return;
+          }
+          restore();
+          fail(() => removeTask(task));
+        },
+      });
+    },
+    [register],
+  );
 
   const updateProject = useCallback(async (id: string, patch: ProjectPatch): Promise<ProjectFailure | null> => {
     const previous = latest.current.projects.find((p) => p.id === id);
@@ -175,18 +230,36 @@ export function useBoard() {
     return projectFailure(res);
   }, []);
 
-  const removeProject = useCallback(async (id: string): Promise<ProjectFailure | null> => {
-    const removed = latest.current.projects.find((p) => p.id === id);
-    if (!removed) return null;
-    const orphaned = new Set(latest.current.tasks.filter((t) => t.projectId === id).map((t) => t.id));
-    setProjects((ps) => ps.filter((p) => p.id !== id));
-    setTasks((ts) => ts.map((t) => (orphaned.has(t.id) ? { ...t, projectId: null } : t)));
-    const res = await send(`/api/projects/${id}`, { method: "DELETE" });
-    if (res?.ok || res?.status === 404) return null;
-    setProjects((ps) => sortProjects([...ps, removed]));
-    setTasks((ts) => ts.map((t) => (orphaned.has(t.id) && t.projectId === null ? { ...t, projectId: id } : t)));
-    return projectFailure(res);
-  }, []);
+  const removeProject = useCallback(
+    (id: string, onFailure: (failure: ProjectFailure) => void) => {
+      const index = latest.current.projects.findIndex((p) => p.id === id);
+      if (index < 0) return;
+      const removed = latest.current.projects[index];
+      const orphaned = new Set(latest.current.tasks.filter((t) => t.projectId === id).map((t) => t.id));
+      const restore = () => {
+        hiddenProjects.current.delete(id);
+        setProjects((ps) => (ps.some((p) => p.id === id) ? ps : sortProjects([...ps, removed])));
+        setTasks((ts) => ts.map((t) => (orphaned.has(t.id) && t.projectId === null ? { ...t, projectId: id } : t)));
+      };
+      hiddenProjects.current.add(id);
+      setProjects((ps) => ps.filter((p) => p.id !== id));
+      setTasks((ts) => ts.map((t) => (orphaned.has(t.id) ? { ...t, projectId: null } : t)));
+      register({
+        label: deletedLabel(removed.name),
+        undo: restore,
+        commit: async () => {
+          const res = await sendDelete(`/api/projects/${id}`);
+          if (res?.ok || res?.status === 404) {
+            hiddenProjects.current.delete(id);
+            return;
+          }
+          restore();
+          onFailure(await projectFailure(res));
+        },
+      });
+    },
+    [register],
+  );
 
   const retry = useCallback(() => {
     const again = error === "save" ? failed.current : reload;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import { useBoardContext } from "@/components/BoardProvider";
 import { ColorSwatches, colorVar } from "@/components/ColorSwatches";
@@ -13,13 +13,9 @@ import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import { cn } from "@/lib/utils";
 import { ProjectMenu, type ProjectAction } from "./ProjectMenu";
 
-const UNDO_MS = 5000;
 const DEFAULT_COLOR: ProjectColor = "teal";
 
-type Notice =
-  | { kind: "deleted"; project: ProjectDto; taskIds: string[] }
-  | { kind: "failed"; message: string; again?: () => void }
-  | null;
+type Notice = { message: string; again?: () => void } | null;
 
 type Progress = { done: number; total: number };
 
@@ -30,8 +26,6 @@ export function ProjectsList({ showBars }: Props) {
   const { filter, setFilter } = useFilters();
   const [notice, setNotice] = useState<Notice>(null);
   const [adding, setAdding] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const undoRef = useRef<HTMLButtonElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
 
   const week = board.week?.start;
@@ -44,32 +38,13 @@ export function ProjectsList({ showBars }: Props) {
     progress.set(t.projectId, p);
   }
 
-  function expire() {
-    if (document.activeElement === undoRef.current) addRef.current?.focus();
-    setNotice(null);
-  }
-
   function closeForm() {
     setAdding(false);
     requestAnimationFrame(() => addRef.current?.focus());
   }
 
-  function show(next: Notice) {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = next?.kind === "deleted" ? setTimeout(expire, UNDO_MS) : null;
-    setNotice(next);
-  }
-
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
-
-  useEffect(() => {
-    if (notice?.kind === "deleted") undoRef.current?.focus();
-  }, [notice]);
-
   function fail({ message, retryable }: ProjectFailure, again: () => void) {
-    show({ kind: "failed", message, again: retryable ? again : undefined });
+    setNotice({ message, again: retryable ? again : undefined });
   }
 
   async function rename(project: ProjectDto, name: string) {
@@ -82,32 +57,10 @@ export function ProjectsList({ showBars }: Props) {
     if (failure) fail(failure, () => recolor(project, color));
   }
 
-  async function remove(project: ProjectDto) {
-    const taskIds = board.tasks.filter((t) => t.projectId === project.id).map((t) => t.id);
+  function remove(project: ProjectDto) {
     if (filter?.kind === "project" && filter.id === project.id) setFilter(null);
-    show({ kind: "deleted", project, taskIds });
-    const failure = await board.removeProject(project.id);
-    if (failure) fail(failure, () => remove(project));
-  }
-
-  async function undo(project: ProjectDto, taskIds: string[]) {
-    addRef.current?.focus();
-    show(null);
-    let restored: ProjectDto;
-    try {
-      restored = await board.addProject({ name: project.name, color: project.color as ProjectColor });
-    } catch (e) {
-      show({ kind: "failed", message: e instanceof Error ? e.message : "couldn't restore the project" });
-      return;
-    }
-    await relink(restored.id, taskIds);
-  }
-
-  async function relink(projectId: string, taskIds: string[]) {
-    const results = await Promise.all(taskIds.map((id) => board.updateTask(id, { projectId })));
-    const failed = taskIds.filter((_, i) => results[i]);
-    const message = results.find(Boolean);
-    if (message) show({ kind: "failed", message, again: () => relink(projectId, failed) });
+    setNotice(null);
+    board.removeProject(project.id, (failure) => fail(failure, () => remove(project)));
   }
 
   function toggle(id: string) {
@@ -136,20 +89,7 @@ export function ProjectsList({ showBars }: Props) {
         ))}
       </ul>
       <div aria-live="polite" className="px-2 text-xs text-muted-foreground empty:hidden">
-        {notice?.kind === "deleted" && (
-          <p className="m-0">
-            deleted “{notice.project.name}” ·{" "}
-            <button
-              ref={undoRef}
-              type="button"
-              className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => undo(notice.project, notice.taskIds)}
-            >
-              undo
-            </button>
-          </p>
-        )}
-        {notice?.kind === "failed" && (
+        {notice && (
           <p role="alert" className="m-0">
             {notice.message}
             {notice.again && (
@@ -160,7 +100,7 @@ export function ProjectsList({ showBars }: Props) {
                   className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => {
                     const again = notice.again;
-                    show(null);
+                    setNotice(null);
                     again?.();
                   }}
                 >

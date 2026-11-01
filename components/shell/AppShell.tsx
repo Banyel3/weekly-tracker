@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Sidebar showBars="always" onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <main className="min-w-0 flex-1 min-[600px]:max-[899px]:[&_.app]:h-[calc(100dvh-3rem)]">{children}</main>
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }

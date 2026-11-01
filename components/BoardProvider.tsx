@@ -4,11 +4,13 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useBoard, type BoardState } from "./useBoard";
 import { FiltersContext, useFiltersState } from "./useFilters";
+import { UndoContext, useUndoState } from "./useUndo";
 
 const BoardContext = createContext<BoardState | null>(null);
 
 export function BoardProvider({ children }: { children: ReactNode }) {
-  const board = useBoard();
+  const undo = useUndoState();
+  const board = useBoard(undo.register);
   const filters = useFiltersState();
   const pathname = usePathname();
   const { clear } = filters;
@@ -16,9 +18,11 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   useEffect(() => clear(), [pathname, clear]);
 
   return (
-    <BoardContext.Provider value={board}>
-      <FiltersContext.Provider value={filters}>{children}</FiltersContext.Provider>
-    </BoardContext.Provider>
+    <UndoContext.Provider value={undo}>
+      <BoardContext.Provider value={board}>
+        <FiltersContext.Provider value={filters}>{children}</FiltersContext.Provider>
+      </BoardContext.Provider>
+    </UndoContext.Provider>
   );
 }
 

@@ -21,7 +21,7 @@ type Props = {
 export function ColorSwatches({ value, onChange, legend = "Color", className }: Props) {
   const name = useId();
   return (
-    <fieldset className={cn("swatches m-0 flex flex-wrap gap-1 border-0 p-0", className)}>
+    <fieldset className={cn("m-0 flex flex-wrap gap-1 border-0 p-0", className)}>
       <legend className="mb-1 p-0 text-xs font-semibold text-muted-foreground">{legend}</legend>
       {COLORS.map((color) => (
         <label

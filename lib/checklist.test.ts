@@ -50,3 +50,15 @@ describe("readChecklist", () => {
     expect(readChecklist({ nope: 1 })).toEqual([]);
   });
 });
+
+describe("normalizeChecklist ids", () => {
+  it("re-ids duplicate ids and keeps the first", () => {
+    const out = normalizeChecklist([
+      { id: "a", text: "one", done: false },
+      { id: "a", text: "two", done: true },
+    ]);
+    expect(out[0].id).toBe("a");
+    expect(out[1].id).not.toBe("a");
+    expect(out[1]).toMatchObject({ text: "two", done: true });
+  });
+});

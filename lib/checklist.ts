@@ -14,11 +14,16 @@ export const checklistSchema = z.array(checklistItemSchema).max(CHECKLIST_MAX_IT
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
 export function normalizeChecklist(items: z.infer<typeof checklistSchema>): ChecklistItem[] {
+  const seen = new Set<string>();
   return items
     .map((item) => ({ ...item, text: item.text.trim() }))
     .filter((item) => item.text.length > 0)
     .slice(0, CHECKLIST_MAX_ITEMS)
-    .map((item) => ({ id: item.id ?? crypto.randomUUID(), text: item.text, done: item.done }));
+    .map((item) => {
+      const id = item.id && !seen.has(item.id) ? item.id : crypto.randomUUID();
+      seen.add(id);
+      return { id, text: item.text, done: item.done };
+    });
 }
 
 export function readChecklist(value: unknown): ChecklistItem[] {

@@ -1,4 +1,4 @@
-import { Priority, Status, type Task } from "@prisma/client";
+import { Priority, Status, type Prisma, type Task } from "@prisma/client";
 import { z } from "zod";
 import { checklistSchema, normalizeChecklist, readChecklist, type ChecklistItem } from "./checklist";
 import { prisma } from "./db";
@@ -24,6 +24,7 @@ export const updateTaskSchema = createTaskSchema
     priority: z.nativeEnum(Priority).optional(),
     checklist: checklistSchema.optional(),
     archived: z.literal(false).optional(),
+    rolledBackAt: ymd.nullable().optional(),
   });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
@@ -111,11 +112,7 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
     listProjects(),
     prisma.task.findMany({
       where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
-      orderBy: [
-        { rolledBackAt: { sort: "desc", nulls: "last" } },
-        { dueDate: { sort: "asc", nulls: "last" } },
-        { createdAt: "asc" },
-      ],
+      orderBy: { createdAt: "asc" },
     }),
     prisma.task.count({ where: { archived: false } }),
     prisma.task.count({ where: { archived: true } }),
@@ -153,33 +150,37 @@ export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
   return toDto(task);
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
-  const existing = await prisma.task.findUnique({ where: { id } });
-  if (!existing) return null;
-  const task = await prisma.task.update({
-    where: { id },
-    data: {
-      title: input.title,
-      note: input.note,
-      dueDate: optionalDate(input.dueDate),
-      projectId: input.projectId,
-      priority: input.priority,
-      ...(input.checklist !== undefined && { checklist: normalizeChecklist(input.checklist) }),
-      ...(input.status !== undefined && {
-        status: input.status,
-        weekOf: weekOfFor(input.status),
-        rolledBackAt: null,
-        completedAt: completedAtFor(input.status, existing, new Date()),
-      }),
-      ...(input.archived === false && {
+/** Order matters: an explicit rolledBackAt (move undo) overrides the status reset; a restore overrides both. */
+export function updateData(input: UpdateTaskInput, existing: Task, now: Date): Prisma.TaskUncheckedUpdateInput {
+  return {
+    title: input.title,
+    note: input.note,
+    dueDate: optionalDate(input.dueDate),
+    projectId: input.projectId,
+    priority: input.priority,
+    ...(input.checklist !== undefined && { checklist: normalizeChecklist(input.checklist) }),
+    ...(input.status !== undefined && {
+      status: input.status,
+      weekOf: weekOfFor(input.status, now),
+      rolledBackAt: null,
+      completedAt: completedAtFor(input.status, existing, now),
+    }),
+    ...(input.rolledBackAt !== undefined && { rolledBackAt: optionalDate(input.rolledBackAt) }),
+    ...(input.archived === false &&
+      existing.archived && {
         archived: false,
         status: Status.BACKLOG,
         weekOf: null,
         completedAt: null,
         rolledBackAt: null,
       }),
-    },
-  });
+  };
+}
+
+export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
+  const existing = await prisma.task.findUnique({ where: { id } });
+  if (!existing) return null;
+  const task = await prisma.task.update({ where: { id }, data: updateData(input, existing, new Date()) });
   return toDto(task);
 }
 
