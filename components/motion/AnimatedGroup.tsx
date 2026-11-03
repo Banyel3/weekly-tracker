@@ -2,7 +2,8 @@
 "use client";
 
 import React, { type ReactNode } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { motion, type Variants } from "motion/react";
+import { TRANSITION, useReducedMotion } from "./config";
 
 export type AnimatedGroupProps = {
   children: ReactNode;
@@ -11,8 +12,6 @@ export type AnimatedGroupProps = {
   variants?: { container?: Variants; item?: Variants };
 };
 
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-
 const defaultContainerVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.06 } },
@@ -20,7 +19,7 @@ const defaultContainerVariants: Variants = {
 
 const defaultItemVariants: Variants = {
   hidden: { opacity: 0, y: 4 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.15, ease: EASE_OUT } },
+  visible: { opacity: 1, y: 0, transition: TRANSITION },
 };
 
 function AnimatedGroup({ children, className, itemClassName, variants }: AnimatedGroupProps) {

@@ -30,7 +30,7 @@ export function UndoLine({ className, returnFocusTo }: Props) {
       onFocus={() => (focused.current = true)}
       onBlur={() => (focused.current = false)}
       onClick={() => {
-        haptic();
+        if (phone) haptic();
         void undo();
       }}
       className={UNDO_BUTTON}
@@ -48,7 +48,7 @@ export function UndoLine({ className, returnFocusTo }: Props) {
         {line && (
           <div
             key={line.id}
-            className="pointer-events-auto relative flex min-h-11 animate-in items-center gap-3 overflow-hidden rounded-lg border bg-popover py-1 pr-1 pl-3 text-sm text-popover-foreground shadow-lg duration-150 fade-in-0 slide-in-from-bottom-2"
+            className="pointer-events-auto relative flex min-h-11 animate-in items-center gap-3 overflow-hidden rounded-lg border bg-popover py-1 pr-1 pl-3 text-sm text-popover-foreground shadow-lg duration-150 ease-out fade-in-0 slide-in-from-bottom-2"
           >
             <span className="min-w-0 flex-1 truncate">{line.label}</span>
             {button}
@@ -66,7 +66,7 @@ export function UndoLine({ className, returnFocusTo }: Props) {
   return (
     <span aria-live="polite" className={cn("min-w-0 text-xs text-muted-foreground", className)}>
       {line && (
-        <span key={line.id}>
+        <span key={line.id} className="inline-block animate-in duration-150 ease-out fade-in-0 slide-in-from-bottom-2">
           {line.label} · {button}
         </span>
       )}

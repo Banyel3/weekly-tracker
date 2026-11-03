@@ -201,8 +201,8 @@ function ProjectRow({ project, progress, selected, showBars, onToggle, onRename,
                   )}
                 >
                   <span
-                    className="block h-full transition-[width] duration-150 ease-out motion-reduce:transition-none"
-                    style={{ width: `${pct}%`, background: colorVar(project.color) }}
+                    className="block h-full origin-left transition-transform duration-150 ease-out motion-reduce:transition-none"
+                    style={{ transform: `scaleX(${pct / 100})`, background: colorVar(project.color) }}
                   />
                 </span>
               </button>

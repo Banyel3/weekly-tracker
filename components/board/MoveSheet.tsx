@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type ComponentProps } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -13,16 +14,22 @@ type Props = {
   task: TaskDto | null;
   onMove: (task: TaskDto, to: Status) => void;
   onClose: () => void;
+  onCloseAutoFocus?: ComponentProps<typeof SheetContent>["onCloseAutoFocus"];
 };
 
-export function MoveSheet({ task, onMove, onClose }: Props) {
+export function MoveSheet({ task: next, onMove, onClose, onCloseAutoFocus }: Props) {
+  // Keep showing the last task while the sheet animates closed, so it does not collapse mid-exit.
+  const [last, setLast] = useState(next);
+  if (next && next !== last) setLast(next);
+  const task = next ?? last;
   const order = task ? nextColumnFirst(task.status) : [];
   return (
-    <Sheet open={task !== null} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={next !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="gap-1 rounded-t-2xl border-x-0 bg-card px-3 pt-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] data-[state=closed]:duration-150 data-[state=open]:duration-200"
+        onCloseAutoFocus={onCloseAutoFocus}
+        className="gap-1 rounded-t-2xl border-x-0 bg-card px-3 pt-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
       >
         <SheetTitle className="px-2 text-[15px] leading-5 font-medium">Move</SheetTitle>
         <SheetDescription className="line-clamp-1 px-2 text-xs">{task?.title}</SheetDescription>
@@ -35,8 +42,8 @@ export function MoveSheet({ task, onMove, onClose }: Props) {
                   type="button"
                   disabled={current}
                   onClick={() => {
-                    if (!task) return;
-                    onMove(task, status);
+                    if (!next) return;
+                    onMove(next, status);
                     onClose();
                   }}
                   className={cn(

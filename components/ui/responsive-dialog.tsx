@@ -3,15 +3,14 @@
 import { useRef, type ComponentProps, type PointerEvent } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SheetContent } from "@/components/ui/sheet";
+import { shouldDismiss } from "@/components/gestures";
+import { EASE_OUT_CSS } from "@/components/motion/config";
 import { useIsPhone } from "@/components/useMediaQuery";
 import { cn } from "@/lib/utils";
 
-const DISMISS_PX = 120;
-const DISMISS_VELOCITY = 0.5;
-
 type DragState = { startY: number; lastY: number; lastT: number; velocity: number };
 
-/** Drag the handle down to dismiss; translateY follows the finger and springs back short of the threshold. */
+/** Drag the handle down to dismiss; translateY follows the finger and glides back short of the threshold. */
 function useDragToDismiss(onDismiss: () => void) {
   const content = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
@@ -19,7 +18,7 @@ function useDragToDismiss(onDismiss: () => void) {
   function setOffset(px: number, animate: boolean) {
     const el = content.current;
     if (!el) return;
-    el.style.transition = animate ? "transform 150ms ease-out" : "none";
+    el.style.transition = animate ? `transform 150ms ${EASE_OUT_CSS}` : "none";
     el.style.transform = px ? `translateY(${px}px)` : "";
   }
 
@@ -44,7 +43,7 @@ function useDragToDismiss(onDismiss: () => void) {
         drag.current = null;
         if (!d) return;
         const offset = e.clientY - d.startY;
-        if (offset > DISMISS_PX || (offset > 0 && d.velocity > DISMISS_VELOCITY)) onDismiss();
+        if (shouldDismiss(offset, d.velocity)) onDismiss();
         else setOffset(0, true);
       },
       onPointerCancel() {
@@ -80,7 +79,7 @@ export function ResponsiveDialogContent({ className, dialogClassName, onDismiss,
       side="bottom"
       className={cn(
         className,
-        "max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl border-x-0 pt-0 pb-[calc(1.25rem+env(safe-area-inset-bottom))] [scroll-padding-bottom:50vh] data-[state=closed]:duration-150 data-[state=open]:duration-200",
+        "max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl border-x-0 pt-0 pb-[calc(1.25rem+env(safe-area-inset-bottom))] [scroll-padding-bottom:50vh]",
       )}
       {...props}
     >

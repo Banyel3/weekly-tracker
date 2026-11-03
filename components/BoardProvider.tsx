@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { MotionConfig } from "motion/react";
+import { TRANSITION } from "./motion/config";
 import { useBoard, type BoardState } from "./useBoard";
 import { FiltersContext, useFiltersState } from "./useFilters";
 import { TaskDialogContext, useTaskDialogState } from "./useTaskDialog";
@@ -22,15 +24,17 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   useEffect(() => clear(), [pathname, clear]);
 
   return (
-    <UndoContext.Provider value={undo}>
-      <BoardContext.Provider value={board}>
-        <ReviewContext.Provider value={review}>
-          <FiltersContext.Provider value={filters}>
-            <TaskDialogContext.Provider value={dialog}>{children}</TaskDialogContext.Provider>
-          </FiltersContext.Provider>
-        </ReviewContext.Provider>
-      </BoardContext.Provider>
-    </UndoContext.Provider>
+    <MotionConfig reducedMotion="user" transition={TRANSITION}>
+      <UndoContext.Provider value={undo}>
+        <BoardContext.Provider value={board}>
+          <ReviewContext.Provider value={review}>
+            <FiltersContext.Provider value={filters}>
+              <TaskDialogContext.Provider value={dialog}>{children}</TaskDialogContext.Provider>
+            </FiltersContext.Provider>
+          </ReviewContext.Provider>
+        </BoardContext.Provider>
+      </UndoContext.Provider>
+    </MotionConfig>
   );
 }
 

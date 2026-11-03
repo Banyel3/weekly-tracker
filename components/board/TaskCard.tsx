@@ -3,7 +3,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import { formatInTimeZone } from "date-fns-tz";
 import { ArrowLeftRight, StickyNote } from "lucide-react";
-import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import type { ReactNode, Ref } from "react";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -77,11 +78,22 @@ function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactN
 }
 
 const CARD =
-  "flex flex-none flex-col gap-1 rounded-lg border bg-muted px-2.5 py-2 transition-[border-color,opacity] duration-150 ease-out motion-reduce:transition-none";
+  "flex flex-none flex-col gap-1 rounded-lg border bg-muted px-2.5 py-2 transition-[border-color] duration-150 ease-out motion-reduce:transition-none";
 
-type Props = MetaProps & { onOpen: (task: TaskDto) => void; onMove?: (task: TaskDto) => void };
+type Props = MetaProps & {
+  ref?: Ref<HTMLElement>;
+  /**
+   * "held" while a pointer drag owns the card (the overlay moves, layout animation stays off);
+   * "dropped" right after a pointer drop: the card fades in where it landed instead of travelling there.
+   */
+  settle?: "held" | "dropped";
+  onOpen: (task: TaskDto) => void;
+  onMove?: (task: TaskDto) => void;
+};
 
-export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
+export const titleSelector = (id: string) => `[data-card-title="${CSS.escape(id)}"]`;
+
+export function TaskCard({ ref, task, project, week, settle, onOpen, onMove }: Props) {
   const pending = task.id.startsWith("tmp-");
   const data: CardData = { status: task.status, title: task.title };
   const { setNodeRef, setActivatorNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -90,15 +102,25 @@ export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
     disabled: pending,
   });
 
+  const opacity = isDragging ? 0.4 : pending || task.status === "DONE" ? 0.6 : 1;
+  const moves = settle === undefined;
+
   return (
-    <article
-      ref={setNodeRef}
+    <motion.article
+      ref={(el: HTMLElement | null) => {
+        setNodeRef(el);
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
+      layout={moves ? "position" : false}
+      layoutId={moves ? task.id : undefined}
+      initial={settle === "dropped" ? { opacity: 0.4, y: 0 } : { opacity: 0, y: 4 }}
+      animate={{ opacity, y: 0 }}
+      exit={settle === "held" ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0 }}
       className={cn(
         CARD,
         "cursor-grab hover:border-[color:color-mix(in_oklch,var(--border),white_15%)]",
-        task.status === "DONE" && "opacity-60",
-        isDragging && "opacity-40",
-        pending && "cursor-default opacity-60",
+        pending && "cursor-default",
       )}
       {...listeners}
     >
@@ -108,6 +130,7 @@ export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
           ref={setActivatorNodeRef}
           {...attributes}
           type="button"
+          data-card-title={task.id}
           title={task.title}
           disabled={pending}
           onClick={() => onOpen(task)}
@@ -125,7 +148,7 @@ export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
           !pending && (
             <button
               type="button"
-              aria-label="Move"
+              aria-label={`Move “${task.title}”`}
               aria-haspopup="dialog"
               onClick={() => onMove(task)}
               onPointerDown={(e) => e.stopPropagation()}
@@ -137,7 +160,7 @@ export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
           )
         }
       />
-    </article>
+    </motion.article>
   );
 }
 

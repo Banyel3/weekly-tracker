@@ -23,3 +23,9 @@ export function nextColumnFirst(current: Status): Status[] {
   const next = order[(order.indexOf(current) + 1) % order.length];
   return [next, ...order.filter((s) => s !== next)];
 }
+
+/** Fractional page index for the scroll-linked active dot, clamped to the first and last page. */
+export function dotProgress(scrollLeft: number, pageWidth: number, count: number): number {
+  if (pageWidth <= 0) return 0;
+  return Math.min(count - 1, Math.max(0, scrollLeft / pageWidth));
+}

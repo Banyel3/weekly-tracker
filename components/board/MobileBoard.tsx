@@ -2,12 +2,15 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { indexFromScroll } from "./carousel";
+import { useReducedMotion } from "../motion/config";
+import { dotProgress, indexFromScroll } from "./carousel";
 import { ColumnGuide, type GuideColumn } from "./ColumnGuide";
 import { COLUMNS, type Status } from "./dnd";
 
 const START = COLUMNS.findIndex((c) => c.status === "IN_PROGRESS");
+const FLIGHT_MS = 1000;
 const panelId = (i: number) => `carousel-${COLUMNS[i].status}`;
+const tabId = (i: number) => `carousel-tab-${COLUMNS[i].status}`;
 
 type Props = {
   columns: GuideColumn[];
@@ -17,8 +20,12 @@ type Props = {
 
 export function MobileBoard({ columns, dragging, renderColumn }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
+  const guide = useRef<HTMLDivElement>(null);
   const panels = useRef<(HTMLDivElement | null)[]>([]);
   const [index, setIndex] = useState(START);
+  const reduced = useReducedMotion();
+  // While a dot or arrow jump scrolls, the panels it passes are not announced; only where it lands is.
+  const flight = useRef<{ to: number; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   function leftOf(i: number): number {
     const el = scroller.current;
@@ -32,7 +39,18 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     return a && b ? b.offsetLeft - a.offsetLeft : 0;
   }
 
+  function land(i: number) {
+    if (flight.current) {
+      if (i !== flight.current.to) return;
+      clearTimeout(flight.current.timer);
+      flight.current = null;
+    }
+    setIndex(i);
+  }
+
   function go(i: number) {
+    if (flight.current) clearTimeout(flight.current.timer);
+    flight.current = { to: i, timer: setTimeout(() => (flight.current = null), FLIGHT_MS) };
     setIndex(i);
     scroller.current?.scrollTo({ left: leftOf(i) });
   }
@@ -44,16 +62,28 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
   useEffect(() => {
     const root = scroller.current;
     if (!root) return;
+    const onScroll = () =>
+      guide.current?.style.setProperty("--dot", String(dotProgress(root.scrollLeft, pageWidth(), COLUMNS.length)));
+    const onEnd = () => {
+      if (flight.current) clearTimeout(flight.current.timer);
+      flight.current = null;
+      setIndex(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length));
+    };
+    onScroll();
+    root.addEventListener("scroll", onScroll, { passive: true });
+    root.addEventListener("scrollend", onEnd);
     if (typeof IntersectionObserver === "undefined") {
       let timer: ReturnType<typeof setTimeout> | undefined;
-      const onScroll = () => {
+      const onSettle = () => {
         clearTimeout(timer);
-        timer = setTimeout(() => setIndex(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length)), 80);
+        timer = setTimeout(() => land(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length)), 80);
       };
-      root.addEventListener("scroll", onScroll, { passive: true });
+      root.addEventListener("scroll", onSettle, { passive: true });
       return () => {
         clearTimeout(timer);
         root.removeEventListener("scroll", onScroll);
+        root.removeEventListener("scrollend", onEnd);
+        root.removeEventListener("scroll", onSettle);
       };
     }
     const observer = new IntersectionObserver(
@@ -61,14 +91,20 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           const i = panels.current.indexOf(entry.target as HTMLDivElement);
-          if (i >= 0) setIndex(i);
+          if (i >= 0) land(i);
         }
       },
       { root, threshold: 0.6 },
     );
     for (const panel of panels.current) if (panel) observer.observe(panel);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      root.removeEventListener("scroll", onScroll);
+      root.removeEventListener("scrollend", onEnd);
+    };
   }, []);
+
+  useEffect(() => () => clearTimeout(flight.current?.timer), []);
 
   const wasDragging = useRef(false);
   useEffect(() => {
@@ -83,7 +119,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <ColumnGuide index={index} columns={columns} panelId={panelId} onGo={go} />
+      <ColumnGuide ref={guide} index={index} columns={columns} panelId={panelId} tabId={tabId} follow={!reduced} onGo={go} />
       <div
         ref={scroller}
         data-carousel
@@ -96,6 +132,8 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
           <div
             key={status}
             id={panelId(i)}
+            role="tabpanel"
+            aria-labelledby={tabId(i)}
             ref={(el) => {
               panels.current[i] = el;
             }}

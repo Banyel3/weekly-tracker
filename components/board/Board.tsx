@@ -11,12 +11,17 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
+  type DropAnimation,
 } from "@dnd-kit/core";
+import { LayoutGroup } from "motion/react";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
+import { STILL_PX, isLongPressWithoutMove } from "../gestures";
+import { DURATION_MS, EASE_OUT_CSS, useReducedMotion } from "../motion/config";
 import type { NewTask } from "../useBoard";
 import { useDebounced } from "../useDebounced";
 import { haptic } from "../haptics";
@@ -28,7 +33,7 @@ import { MobileBoard } from "./MobileBoard";
 import { MoveSheet } from "./MoveSheet";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { SearchField } from "./SearchField";
-import { CardPreview } from "./TaskCard";
+import { CardPreview, titleSelector } from "./TaskCard";
 import { TaskDialog } from "./TaskDialog";
 import { UndoLine } from "./UndoLine";
 
@@ -55,12 +60,25 @@ function useBoardSearch() {
   return [q, setQ] as const;
 }
 
-const STILL_PX = 8;
+// No side effects: dnd-kit would restore a stale inline opacity on the source card after motion has animated it.
+const DROP: DropAnimation = { duration: DURATION_MS, easing: EASE_OUT_CSS, sideEffects: null };
 
-/** A touch long-press that activated the drag but was released in place, over its own column or nothing. */
-function isLongPressWithoutMove(event: Event, delta: { x: number; y: number }, over: Status | undefined, from: Status) {
-  const touch = typeof TouchEvent !== "undefined" && event instanceof TouchEvent;
-  return touch && Math.hypot(delta.x, delta.y) < STILL_PX && (over === undefined || over === from);
+const isTouch = (event: Event) => typeof TouchEvent !== "undefined" && event instanceof TouchEvent;
+const isKeyboard = (event: Event) => typeof KeyboardEvent !== "undefined" && event instanceof KeyboardEvent;
+
+type Drag = { id: string; pointer: boolean; armed: boolean };
+
+/** Pointer drags hand the card to the overlay; a successful pointer drop fades in at the destination for one beat. */
+function useDragState() {
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [dropped, setDropped] = useState<string | null>(null);
+  const [landed, setLanded] = useState(false);
+  useEffect(() => {
+    if (!dropped) return;
+    const timer = setTimeout(() => setDropped(null), DURATION_MS * 2);
+    return () => clearTimeout(timer);
+  }, [dropped]);
+  return { drag, setDrag, dropped, setDropped, landed, setLanded };
 }
 
 export function Board() {
@@ -70,9 +88,12 @@ export function Board() {
   const { week, projects, tasks } = board;
   const visible = useMemo(() => tasks.filter((t) => matchesFilter(t, filter)), [tasks, filter]);
   const { target: dialog, openTask, openCreate, close } = useTaskDialog();
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const { drag, setDrag, dropped, setDropped, landed, setLanded } = useDragState();
+  const activeId = drag?.id ?? null;
   const phone = useIsPhone();
+  const reduced = useReducedMotion();
   const [moving, setMoving] = useState<TaskDto | null>(null);
+  const refocus = useRef<string | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -94,18 +115,43 @@ export function Board() {
     return board.updateTask(task.id, status === task.status ? rest : body);
   }
 
+  function onDragStart({ active, activatorEvent }: DragStartEvent) {
+    if (phone) haptic();
+    setDropped(null);
+    setLanded(false);
+    setDrag({ id: String(active.id), pointer: !isKeyboard(activatorEvent), armed: false });
+  }
+
+  // Autoscroll stays off until the finger has moved, so a still long-press near an edge never pages the carousel.
+  function onDragMove({ delta }: DragMoveEvent) {
+    if (drag && !drag.armed && Math.hypot(delta.x, delta.y) >= STILL_PX) setDrag({ ...drag, armed: true });
+  }
+
   function onDragEnd({ active, over, delta, activatorEvent }: DragEndEvent) {
-    setActiveId(null);
     const task = tasks.find((t) => t.id === active.id);
     const to = over?.id as Status | undefined;
-    if (task && phone && isLongPressWithoutMove(activatorEvent, delta, to, task.status)) {
-      setMoving(task);
+    const moved = !!task && !!to && task.status !== to;
+    setLanded(moved);
+    setDrag(null);
+    if (task && phone && isLongPressWithoutMove({ touch: isTouch(activatorEvent), delta, over: to, from: task.status })) {
+      openMove(task, true);
       return;
     }
-    if (task && to && task.status !== to) {
-      haptic();
+    if (task && to && moved) {
+      if (phone) haptic();
+      if (drag?.pointer) setDropped(task.id);
       board.moveTask(task, to);
     }
+  }
+
+  function openMove(task: TaskDto, byPress: boolean) {
+    refocus.current = byPress ? task.id : null;
+    setMoving(task);
+  }
+
+  function settleOf(task: TaskDto): "held" | "dropped" | undefined {
+    if (drag?.pointer && drag.id === task.id) return "held";
+    return dropped === task.id ? "dropped" : undefined;
   }
 
   function renderColumn(status: Status, label: string, className?: string) {
@@ -121,7 +167,8 @@ export function Board() {
         loading={board.status === "loading"}
         onOpen={openTask}
         onAdd={openCreate}
-        onMove={phone ? setMoving : undefined}
+        onMove={phone ? (task) => openMove(task, false) : undefined}
+        settleOf={settleOf}
         className={className}
       />
     );
@@ -159,36 +206,52 @@ export function Board() {
       <DndContext
         sensors={sensors}
         accessibility={{ announcements, screenReaderInstructions: SCREEN_READER_INSTRUCTIONS }}
-        autoScroll={phone ? { enabled: true, threshold: { x: 0.15, y: 0 } } : undefined}
-        onDragStart={({ active }: DragStartEvent) => {
-          haptic();
-          setActiveId(String(active.id));
-        }}
+        autoScroll={phone ? { enabled: drag?.armed ?? false, threshold: { x: 0.15, y: 0 } } : undefined}
+        onDragStart={onDragStart}
+        onDragMove={phone ? onDragMove : undefined}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActiveId(null)}
+        onDragCancel={() => setDrag(null)}
       >
         {phone ? (
-          <MobileBoard
-            dragging={activeId !== null}
-            columns={COLUMNS.map(({ status }) => ({
-              shown: visible.filter((t) => t.status === status).length,
-              total: tasks.filter((t) => t.status === status).length,
-            }))}
-            renderColumn={(status, label) => renderColumn(status, label, "h-full")}
-          />
+          <LayoutGroup id="board-phone">
+            <MobileBoard
+              dragging={activeId !== null}
+              columns={COLUMNS.map(({ status }) => ({
+                shown: visible.filter((t) => t.status === status).length,
+                total: tasks.filter((t) => t.status === status).length,
+              }))}
+              renderColumn={(status, label) => renderColumn(status, label, "h-full")}
+            />
+          </LayoutGroup>
         ) : (
           <div className="min-h-0 flex-1 overflow-x-auto max-[899px]:invisible">
-            <div className="grid h-full min-w-[916px] grid-cols-[minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)] grid-rows-[minmax(0,1fr)] gap-3">
-              {COLUMNS.map(({ status, label }) => renderColumn(status, label))}
-            </div>
+            <LayoutGroup id="board-desktop">
+              <div className="grid h-full min-w-[916px] grid-cols-[minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)] grid-rows-[minmax(0,1fr)] gap-3">
+                {COLUMNS.map(({ status, label }) => renderColumn(status, label))}
+              </div>
+            </LayoutGroup>
           </div>
         )}
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={reduced || landed ? null : DROP}>
           {active && week && <CardPreview task={active} project={projectOf(active.projectId)} week={week} />}
         </DragOverlay>
       </DndContext>
       {phone && (
-        <MoveSheet task={moving} onMove={(task, to) => board.moveTask(task, to)} onClose={() => setMoving(null)} />
+        <MoveSheet
+          task={moving}
+          onMove={(task, to) => {
+            refocus.current = task.id;
+            board.moveTask(task, to);
+          }}
+          onClose={() => setMoving(null)}
+          onCloseAutoFocus={(e) => {
+            const id = refocus.current;
+            refocus.current = null;
+            if (!id) return;
+            e.preventDefault();
+            requestAnimationFrame(() => document.querySelector<HTMLElement>(titleSelector(id))?.focus({ preventScroll: true }));
+          }}
+        />
       )}
       <TaskDialog
         target={dialog}

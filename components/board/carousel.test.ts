@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guideLabels, indexFromScroll, nextColumnFirst } from "./carousel";
+import { dotProgress, guideLabels, indexFromScroll, nextColumnFirst } from "./carousel";
 
 describe("guideLabels", () => {
   it("names the neighbours of each column", () => {
@@ -40,5 +40,22 @@ describe("nextColumnFirst", () => {
 
   it("wraps Done around to Backlog", () => {
     expect(nextColumnFirst("DONE")).toEqual(["BACKLOG", "THIS_WEEK", "IN_PROGRESS", "DONE"]);
+  });
+});
+
+describe("dotProgress", () => {
+  it("is the fractional page under the centre", () => {
+    expect(dotProgress(0, 300, 4)).toBe(0);
+    expect(dotProgress(450, 300, 4)).toBe(1.5);
+    expect(dotProgress(900, 300, 4)).toBe(3);
+  });
+
+  it("clamps overscroll at both ends", () => {
+    expect(dotProgress(-40, 300, 4)).toBe(0);
+    expect(dotProgress(1200, 300, 4)).toBe(3);
+  });
+
+  it("is 0 before the panels are measured", () => {
+    expect(dotProgress(120, 0, 4)).toBe(0);
   });
 });

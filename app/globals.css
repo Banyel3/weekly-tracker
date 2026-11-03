@@ -11,6 +11,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

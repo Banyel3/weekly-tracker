@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
 import { WIP_LIMIT } from "@/lib/constants";
 import type { ProjectDto } from "@/lib/projects";
@@ -23,10 +24,11 @@ type Props = {
   onOpen: (task: TaskDto) => void;
   onAdd: (status: Status) => void;
   onMove?: (task: TaskDto) => void;
+  settleOf?: (task: TaskDto) => "held" | "dropped" | undefined;
   className?: string;
 };
 
-export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd, onMove, className }: Props) {
+export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd, onMove, settleOf, className }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const headingId = `column-${status}`;
   const overLimit = status === "IN_PROGRESS" && total > WIP_LIMIT;
@@ -68,26 +70,31 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
           </button>
         )}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1">
         {loading ? (
           <>
             <div className="h-12 flex-none animate-pulse rounded-lg bg-muted/60 motion-reduce:animate-none" />
             <div className="h-12 flex-none animate-pulse rounded-lg bg-muted/60 motion-reduce:animate-none" />
           </>
-        ) : week && tasks.length === 0 ? (
-          <p className="m-0 px-0.5 py-1 text-sm text-muted-foreground">nothing here</p>
         ) : (
-          week &&
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              project={projectOf(task.projectId)}
-              week={week}
-              onOpen={onOpen}
-              onMove={onMove}
-            />
-          ))
+          week && (
+            <>
+              {tasks.length === 0 && <p className="m-0 px-0.5 py-1 text-sm text-muted-foreground">nothing here</p>}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    project={projectOf(task.projectId)}
+                    week={week}
+                    settle={settleOf?.(task)}
+                    onOpen={onOpen}
+                    onMove={onMove}
+                  />
+                ))}
+              </AnimatePresence>
+            </>
+          )
         )}
       </div>
       {week && (
