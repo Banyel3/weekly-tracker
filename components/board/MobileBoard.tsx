@@ -31,7 +31,11 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     const el = scroller.current;
     const panel = panels.current[i];
     if (!el || !panel) return 0;
-    return panel.offsetLeft - (el.clientWidth - panel.offsetWidth) / 2;
+    const style = getComputedStyle(el);
+    const start = parseFloat(style.scrollPaddingInlineStart) || 0;
+    const end = parseFloat(style.scrollPaddingInlineEnd) || 0;
+    const snapport = el.clientWidth - start - end;
+    return panel.offsetLeft - start - (snapport - panel.offsetWidth) / 2;
   }
 
   function pageWidth(): number {
@@ -127,7 +131,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
         ref={scroller}
         data-carousel
         className={cn(
-          "relative -mx-4 flex min-[600px]:-mx-6 h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] min-h-[60dvh] gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-6 [scrollbar-width:none] motion-reduce:scroll-auto",
+          "relative -mx-4 flex min-[600px]:-mx-6 h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] min-h-[60dvh] gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-6 scroll-px-6 [scrollbar-width:none] motion-reduce:scroll-auto",
           dragging ? "snap-none" : "snap-x snap-mandatory scroll-smooth",
         )}
       >
