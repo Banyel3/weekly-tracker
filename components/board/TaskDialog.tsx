@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -77,11 +77,21 @@ function formOf(target: DialogTarget | null): Form {
   };
 }
 
+/** The opener if it is still live, else the card that now shows the task (a save can move it to another column). */
+function returnFocus(el: HTMLElement | null, taskId: string | null) {
+  const live = (node: HTMLElement | null) => node?.isConnected && !node.closest("[data-motion-pop-id]");
+  if (el && live(el)) return el.focus({ preventScroll: true });
+  if (!taskId) return;
+  const titles = document.querySelectorAll<HTMLElement>(`[data-card-title="${CSS.escape(taskId)}"]`);
+  [...titles].find(live)?.focus({ preventScroll: true });
+}
+
 export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRestore, onDelete, onClose }: Props) {
   const [form, setForm] = useState<Form>(formOf(null));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const deleted = useRef(false);
+  const opener = useRef<{ el: HTMLElement | null; taskId: string | null }>({ el: null, taskId: null });
   const phone = useIsPhone();
 
   const task = target && target.mode !== "create" ? target.task : null;
@@ -89,6 +99,14 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
   const creating = form.project === NEW_PROJECT;
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
+
+  const isOpen = target !== null;
+  // Layout phase: runs before the dialog's focus scope moves focus inside, so activeElement is still the opener.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const el = document.activeElement;
+    opener.current = { el: el instanceof HTMLElement ? el : null, taskId: task?.id ?? null };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!target) return;
@@ -195,9 +213,14 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
         onEscapeKeyDown={(e) => busy && e.preventDefault()}
         onInteractOutside={(e) => busy && e.preventDefault()}
         onCloseAutoFocus={(e) => {
-          if (!deleted.current) return;
+          // Radix hands focus back to a DialogTrigger; this dialog has none, so it returns focus itself.
           e.preventDefault();
-          requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-undo-button]")?.focus());
+          const wasDeleted = deleted.current;
+          const { el, taskId } = opener.current;
+          requestAnimationFrame(() => {
+            if (wasDeleted) document.querySelector<HTMLElement>("[data-undo-button]")?.focus();
+            else returnFocus(el, taskId);
+          });
         }}
         className="gap-5 bg-card p-6"
         dialogClassName="flex max-h-[85dvh] flex-col rounded-xl sm:max-w-[480px]"
@@ -242,14 +265,14 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
                   disabled={disabled}
                 >
                   <SelectTrigger id={id("project")} className={CONTROL}>
-                    <SelectValue />
+                    <SelectValue className="min-w-0" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NO_PROJECT_ITEM}>No project</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         <Dot color={colorVar(p.color)} />
-                        {p.name}
+                        <span className="min-w-0 truncate">{p.name}</span>
                       </SelectItem>
                     ))}
                     {onCreateProject && (

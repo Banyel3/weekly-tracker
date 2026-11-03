@@ -36,7 +36,7 @@ import { MobileBoard } from "./MobileBoard";
 import { MoveSheet } from "./MoveSheet";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { SearchField } from "./SearchField";
-import { CardPreview, titleSelector } from "./TaskCard";
+import { CardPreview, hasPriority, titleSelector } from "./TaskCard";
 import { TaskDialog } from "./TaskDialog";
 import { UndoLine } from "./UndoLine";
 
@@ -149,6 +149,8 @@ export function Board() {
       if (phone) haptic();
       if (drag?.pointer) setDropped(task.id);
       board.moveTask(task, to);
+      // A keyboard drop remounts the card in its new column; keep focus on it so the next arrow press continues.
+      if (drag && !drag.pointer) requestAnimationFrame(() => requestAnimationFrame(() => liveTitle(task.id)?.focus()));
     }
   }
 
@@ -238,7 +240,14 @@ export function Board() {
           </div>
         )}
         <DragOverlay dropAnimation={reduced || landed ? null : DROP}>
-          {active && week && <CardPreview task={active} project={projectOf(active.projectId)} week={week} />}
+          {active && week && (
+            <CardPreview
+              task={active}
+              project={projectOf(active.projectId)}
+              week={week}
+              flagSlot={hasPriority(visible.filter((t) => t.status === active.status))}
+            />
+          )}
         </DragOverlay>
       </DndContext>
       {phone && (
