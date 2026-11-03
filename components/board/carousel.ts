@@ -4,12 +4,20 @@ export type Guide = { left: string | null; current: string; right: string | null
 
 const clamp = (i: number) => Math.min(COLUMNS.length - 1, Math.max(0, i));
 
-export function guideLabels(index: number): Guide {
+/** First column of the page holding `index` when the carousel shows `size` columns per page. */
+export function pageStart(index: number, size: number): number {
   const i = clamp(index);
+  return Math.min(COLUMNS.length - size, i - (i % size));
+}
+
+export function guideLabels(index: number, size = 1): Guide {
+  const i = pageStart(index, size);
   return {
     left: COLUMNS[i - 1]?.label ?? null,
-    current: COLUMNS[i].label,
-    right: COLUMNS[i + 1]?.label ?? null,
+    current: COLUMNS.slice(i, i + size)
+      .map((c) => c.label)
+      .join(" · "),
+    right: COLUMNS[i + size]?.label ?? null,
   };
 }
 

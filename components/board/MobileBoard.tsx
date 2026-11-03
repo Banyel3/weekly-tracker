@@ -3,12 +3,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "../motion/config";
-import { dotProgress, indexFromScroll } from "./carousel";
+import { useMediaQuery } from "../useMediaQuery";
+import { dotProgress, indexFromScroll, pageStart } from "./carousel";
 import { ColumnGuide, type GuideColumn } from "./ColumnGuide";
 import { COLUMNS, type Status } from "./dnd";
 
 const START = COLUMNS.findIndex((c) => c.status === "IN_PROGRESS");
 const FLIGHT_MS = 1000;
+/** Tablets (600–899px) show two columns per page. */
+const PAIR_QUERY = "(min-width: 600px)";
 const panelId = (i: number) => `carousel-${COLUMNS[i].status}`;
 const tabId = (i: number) => `carousel-tab-${COLUMNS[i].status}`;
 
@@ -24,6 +27,9 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
   const panels = useRef<(HTMLDivElement | null)[]>([]);
   const [index, setIndex] = useState(START);
   const reduced = useReducedMotion();
+  const size = useMediaQuery(PAIR_QUERY) ? 2 : 1;
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
   // While a dot or arrow jump scrolls, the panels it passes are not announced; only where it lands is.
   const flight = useRef<{ to: number; timer: ReturnType<typeof setTimeout> } | null>(null);
 
@@ -31,11 +37,13 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     const el = scroller.current;
     const panel = panels.current[i];
     if (!el || !panel) return 0;
+    const last = panels.current[i + sizeRef.current - 1] ?? panel;
+    const width = last.offsetLeft + last.offsetWidth - panel.offsetLeft;
     const style = getComputedStyle(el);
     const start = parseFloat(style.scrollPaddingInlineStart) || 0;
     const end = parseFloat(style.scrollPaddingInlineEnd) || 0;
     const snapport = el.clientWidth - start - end;
-    return panel.offsetLeft - start - (snapport - panel.offsetWidth) / 2;
+    return panel.offsetLeft - start - (snapport - width) / 2;
   }
 
   function pageWidth(): number {
@@ -43,7 +51,11 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     return a && b ? b.offsetLeft - a.offsetLeft : 0;
   }
 
-  function land(i: number) {
+  const page = (i: number) => pageStart(i, sizeRef.current);
+  const fromScroll = (root: HTMLDivElement) => page(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length));
+
+  function land(column: number) {
+    const i = page(column);
     if (flight.current) {
       if (i !== flight.current.to) return;
       clearTimeout(flight.current.timer);
@@ -52,7 +64,8 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     setIndex(i);
   }
 
-  function go(i: number) {
+  function go(column: number) {
+    const i = page(column);
     const left = leftOf(i);
     const root = scroller.current;
     if (i === index && root && Math.abs(root.scrollLeft - left) < 1) return;
@@ -66,6 +79,15 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     scroller.current?.scrollTo({ left: leftOf(START), behavior: "instant" });
   }, []);
 
+  const shownSize = useRef(size);
+  useLayoutEffect(() => {
+    if (shownSize.current === size) return;
+    shownSize.current = size;
+    const i = page(index);
+    setIndex(i);
+    scroller.current?.scrollTo({ left: leftOf(i), behavior: "instant" });
+  }, [size]);
+
   useEffect(() => {
     const root = scroller.current;
     if (!root) return;
@@ -74,7 +96,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
     const onEnd = () => {
       if (flight.current) clearTimeout(flight.current.timer);
       flight.current = null;
-      setIndex(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length));
+      setIndex(fromScroll(root));
     };
     onScroll();
     root.addEventListener("scroll", onScroll, { passive: true });
@@ -83,7 +105,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const onSettle = () => {
         clearTimeout(timer);
-        timer = setTimeout(() => land(indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length)), 80);
+        timer = setTimeout(() => land(fromScroll(root)), 80);
       };
       root.addEventListener("scroll", onSettle, { passive: true });
       return () => {
@@ -117,7 +139,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
   useEffect(() => {
     const root = scroller.current;
     if (wasDragging.current && !dragging && root) {
-      const i = indexFromScroll(root.scrollLeft, pageWidth(), COLUMNS.length);
+      const i = fromScroll(root);
       setIndex(i);
       root.scrollTo({ left: leftOf(i) });
     }
@@ -126,7 +148,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <ColumnGuide ref={guide} index={index} columns={columns} panelId={panelId} tabId={tabId} follow={!reduced} onGo={go} />
+      <ColumnGuide ref={guide} index={index} size={size} columns={columns} panelId={panelId} tabId={tabId} follow={!reduced} onGo={go} />
       <div
         ref={scroller}
         data-carousel
@@ -144,7 +166,10 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
             ref={(el) => {
               panels.current[i] = el;
             }}
-            className="flex w-[calc(100vw-3rem)] shrink-0 snap-center flex-col"
+            className={cn(
+              "flex w-[calc(100vw-3rem)] shrink-0 snap-center flex-col min-[600px]:w-[calc(50vw-1.875rem)]",
+              i % 2 === 0 ? "min-[600px]:snap-start" : "min-[600px]:snap-align-none",
+            )}
           >
             {renderColumn(status, label)}
           </div>

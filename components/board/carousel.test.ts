@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dotProgress, guideLabels, indexFromScroll, nextColumnFirst } from "./carousel";
+import { dotProgress, guideLabels, indexFromScroll, nextColumnFirst, pageStart } from "./carousel";
 
 describe("guideLabels", () => {
   it("names the neighbours of each column", () => {
@@ -12,6 +12,31 @@ describe("guideLabels", () => {
   it("clamps out-of-range indexes", () => {
     expect(guideLabels(-1).current).toBe("Backlog");
     expect(guideLabels(9).current).toBe("Done");
+  });
+});
+
+describe("guideLabels in pairs", () => {
+  it("names the pair and the columns either side of it", () => {
+    expect(guideLabels(0, 2)).toEqual({ left: null, current: "Backlog · This week", right: "In progress" });
+    expect(guideLabels(1, 2)).toEqual({ left: null, current: "Backlog · This week", right: "In progress" });
+    expect(guideLabels(2, 2)).toEqual({ left: "This week", current: "In progress · Done", right: null });
+    expect(guideLabels(3, 2)).toEqual({ left: "This week", current: "In progress · Done", right: null });
+  });
+});
+
+describe("pageStart", () => {
+  it("is the column itself one at a time", () => {
+    expect([0, 1, 2, 3].map((i) => pageStart(i, 1))).toEqual([0, 1, 2, 3]);
+  });
+
+  it("is the first column of the pair two at a time", () => {
+    expect([0, 1, 2, 3].map((i) => pageStart(i, 2))).toEqual([0, 0, 2, 2]);
+  });
+
+  it("clamps out-of-range indexes", () => {
+    expect(pageStart(-1, 2)).toBe(0);
+    expect(pageStart(9, 2)).toBe(2);
+    expect(pageStart(9, 1)).toBe(3);
   });
 });
 
