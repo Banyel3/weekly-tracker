@@ -14,12 +14,12 @@ export function percent(finished: number, planned: number): number {
   return planned > 0 ? Math.round((finished / planned) * 100) : 0;
 }
 
-/** Day of the week for the card header, and a projection once there is a day of data to project from. */
+/** Day of the week for the card header, and a projection once three days of data back it up. */
 export function pace(finished: number, planned: number, today: string): { day: string; pace: string | null } {
   const d = isoWeekday(today);
   const day = `day ${d} of 7`;
   if (planned === 0) return { day, pace: "nothing planned yet" };
-  if (d === 1) return { day, pace: null };
+  if (d < 3) return { day, pace: null };
   return { day, pace: `on pace for ${Math.round((finished / d) * 7)}` };
 }
 

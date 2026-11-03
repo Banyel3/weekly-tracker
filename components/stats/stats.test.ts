@@ -12,8 +12,12 @@ describe("isoWeekday", () => {
 describe("pace", () => {
   it("projects finished tasks over seven days", () => {
     expect(pace(3, 10, "2026-10-31")).toEqual({ day: "day 6 of 7", pace: "on pace for 4" });
-    expect(pace(1, 4, "2026-11-02")).toEqual({ day: "day 1 of 7", pace: null });
     expect(pace(0, 4, "2026-11-04")).toEqual({ day: "day 3 of 7", pace: "on pace for 0" });
+  });
+
+  it("holds the projection back until day 3", () => {
+    expect(pace(1, 4, "2026-11-02")).toEqual({ day: "day 1 of 7", pace: null });
+    expect(pace(2, 2, "2026-11-03")).toEqual({ day: "day 2 of 7", pace: null });
   });
 
   it("says nothing is planned when the week is empty", () => {
