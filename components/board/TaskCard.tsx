@@ -107,11 +107,15 @@ type Props = MetaProps & {
   layoutKey?: string;
   onOpen: (task: TaskDto) => void;
   onMove?: (task: TaskDto) => void;
+  /** Keep an empty flag slot so titles line up; off when no card in the column has a priority. */
+  flagSlot?: boolean;
 };
+
+export const hasPriority = (tasks: TaskDto[]) => tasks.some((t) => t.priority !== "NONE");
 
 export const titleSelector = (id: string) => `[data-card-title="${CSS.escape(id)}"]`;
 
-export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, onMove }: Props) {
+export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, onMove, flagSlot = true }: Props) {
   const pending = task.id.startsWith("tmp-");
   const data: CardData = { status: task.status, title: task.title };
   const { setNodeRef, setActivatorNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -144,7 +148,7 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
       {...listeners}
     >
       <div className="flex items-start gap-2">
-        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} className="mt-[3px]" />
+        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} omitWhenNone={!flagSlot} className="mt-[3px]" />
         <button
           ref={setActivatorNodeRef}
           {...attributes}
@@ -189,11 +193,11 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
   );
 }
 
-export function CardPreview({ task, project, week }: MetaProps) {
+export function CardPreview({ task, project, week, flagSlot = true }: MetaProps & { flagSlot?: boolean }) {
   return (
     <article className={cn(CARD, "cursor-grabbing border-primary")}>
       <div className="flex items-start gap-2">
-        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} className="mt-[3px]" />
+        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} omitWhenNone={!flagSlot} className="mt-[3px]" />
         <div
           className={cn(
             "line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]",

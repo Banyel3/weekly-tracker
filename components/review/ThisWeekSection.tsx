@@ -24,7 +24,8 @@ export function ThisWeekSection({ thisWeek, today, insights }: Props) {
       ) : (
         <>
           <p className="m-0 text-lg leading-7 font-medium tabular-nums">
-            {main} ·{" "}
+            {main}
+            {"\u00a0· "}
             <span className={cn(thisWeek.overdue > 0 && "text-[color:var(--alert)]")}>{overdue}</span>
           </p>
           <div className="-mt-2 flex flex-col gap-0.5">

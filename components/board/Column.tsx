@@ -12,7 +12,7 @@ import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import type { WeekRange } from "@/lib/week";
 import { statusVar, type Status } from "./status";
-import { TaskCard } from "./TaskCard";
+import { hasPriority, TaskCard } from "./TaskCard";
 
 type Props = {
   status: Status;
@@ -34,6 +34,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const headingId = `column-${status}`;
   const overLimit = status === "IN_PROGRESS" && total > WIP_LIMIT;
+  const flagSlot = hasPriority(tasks);
 
   return (
     <section
@@ -82,6 +83,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
                     settle={settleOf?.(task)}
                     onOpen={onOpen}
                     onMove={onMove}
+                    flagSlot={flagSlot}
                   />
                 ))}
               </AnimatePresence>
