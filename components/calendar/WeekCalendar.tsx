@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   DndContext,
@@ -19,6 +19,7 @@ import { todayYmd, weekRange } from "@/lib/week";
 import { useBoardContext } from "../BoardProvider";
 import { FilterChip } from "../board/FilterChip";
 import { useFilters } from "../useFilters";
+import { useIsPhone } from "../useMediaQuery";
 import { useTaskDialog } from "../useTaskDialog";
 import { calendarTasks, fmtYmd, monthGrid, monthOf, shiftMonth, weekDays, ymdOfDayId, type Month } from "./calendar";
 import { DayColumn } from "./DayColumn";
@@ -43,6 +44,9 @@ export function WeekCalendar() {
   const week = board.week ?? weekRange();
   const [month, setMonth] = useState<Month>(() => monthOf(today));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const phone = useIsPhone();
+  const scroller = useRef<HTMLDivElement>(null);
+  const scrolledToToday = useRef(false);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -56,6 +60,14 @@ export function WeekCalendar() {
   const projectsById = useMemo(() => new Map(board.projects.map((p) => [p.id, p])), [board.projects]);
   const projectOf = (id: string | null) => (id ? (projectsById.get(id) ?? null) : null);
   const active = board.tasks.find((t) => t.id === activeId) ?? null;
+
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    const day = el?.querySelector<HTMLElement>("[data-today]");
+    if (!phone || !el || !day || scrolledToToday.current) return;
+    scrolledToToday.current = true;
+    el.scrollTo({ left: day.offsetLeft, behavior: "instant" });
+  }, [phone, view, today]);
 
   function toggleDay(ymd: string) {
     const selected = filter?.kind === "day" && filter.ymd === ymd;
@@ -126,7 +138,10 @@ export function WeekCalendar() {
           </ToggleGroup>
         </div>
       </div>
-      <div className="relative overflow-x-auto">
+      <div
+        ref={scroller}
+        className="relative overflow-x-auto max-[899px]:snap-x max-[899px]:snap-mandatory max-[899px]:overscroll-x-contain"
+      >
         {view === "week" ? (
           <DndContext
             sensors={sensors}

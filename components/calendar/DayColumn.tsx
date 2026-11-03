@@ -27,9 +27,10 @@ export function DayColumn({ ymd, today, tasks, selected, projectOf, onToggleDay,
     <div
       ref={setNodeRef}
       role="group"
+      data-today={isToday || undefined}
       aria-label={fmtYmd(ymd, "EEEE, MMM d")}
       className={cn(
-        "flex min-h-[150px] min-w-0 flex-col gap-1.5 border-t-2 border-r border-t-transparent border-r-border px-2 pt-2 pb-3 transition-colors duration-150 ease-out last:border-r-0",
+        "flex min-h-[150px] min-w-0 flex-col gap-1.5 border-t-2 border-r border-t-transparent border-r-border px-2 pt-2 pb-3 transition-colors duration-150 ease-out last:border-r-0 max-[899px]:snap-start",
         isToday && "bg-muted",
         selected && "border-t-primary",
         isOver && "bg-accent",

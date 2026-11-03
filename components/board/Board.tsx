@@ -14,12 +14,16 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
 import type { NewTask } from "../useBoard";
 import { useDebounced } from "../useDebounced";
+import { haptic } from "../haptics";
+import { useIsPhone } from "../useMediaQuery";
 import { useTaskDialog } from "../useTaskDialog";
 import { matchesFilter, useFilters } from "../useFilters";
 import { Column } from "./Column";
+import { MobileBoard } from "./MobileBoard";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { SearchField } from "./SearchField";
 import { CardPreview } from "./TaskCard";
@@ -57,6 +61,7 @@ export function Board() {
   const visible = useMemo(() => tasks.filter((t) => matchesFilter(t, filter)), [tasks, filter]);
   const { target: dialog, openTask, openCreate, close } = useTaskDialog();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const phone = useIsPhone();
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -82,13 +87,34 @@ export function Board() {
     setActiveId(null);
     const task = tasks.find((t) => t.id === active.id);
     const to = over?.id as Status | undefined;
-    if (task && to && task.status !== to) board.moveTask(task, to);
+    if (task && to && task.status !== to) {
+      haptic();
+      board.moveTask(task, to);
+    }
+  }
+
+  function renderColumn(status: Status, label: string, className?: string) {
+    return (
+      <Column
+        key={status}
+        status={status}
+        label={label}
+        week={week}
+        tasks={visible.filter((t) => t.status === status)}
+        total={tasks.filter((t) => t.status === status).length}
+        projectOf={projectOf}
+        loading={board.status === "loading"}
+        onOpen={openTask}
+        onAdd={openCreate}
+        className={className}
+      />
+    );
   }
 
   return (
-    <section aria-labelledby="board-heading" className="flex min-h-[300px] flex-1 flex-col gap-3 max-[599px]:flex-none">
+    <section aria-labelledby="board-heading" className="flex min-h-[300px] flex-1 flex-col gap-3 max-[899px]:min-h-[60dvh] max-[899px]:flex-none">
       <div className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 id="board-heading" className="m-0 text-[13px] leading-5 font-semibold">
+        <h2 id="board-heading" className={cn("m-0 text-[13px] leading-5 font-semibold", phone && "sr-only")}>
           Board
         </h2>
         <UndoLine returnFocusTo={SEARCH_ID} />
@@ -117,28 +143,30 @@ export function Board() {
       <DndContext
         sensors={sensors}
         accessibility={{ announcements, screenReaderInstructions: SCREEN_READER_INSTRUCTIONS }}
-        onDragStart={({ active }: DragStartEvent) => setActiveId(String(active.id))}
+        autoScroll={phone ? { enabled: true, threshold: { x: 0.15, y: 0 } } : undefined}
+        onDragStart={({ active }: DragStartEvent) => {
+          haptic();
+          setActiveId(String(active.id));
+        }}
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="min-h-0 flex-1 overflow-x-auto max-[599px]:overflow-visible">
-          <div className="grid h-full min-w-[916px] grid-cols-[minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)] grid-rows-[minmax(0,1fr)] gap-3 max-[599px]:h-auto max-[599px]:min-w-0 max-[599px]:grid-cols-1 max-[599px]:grid-rows-none">
-            {COLUMNS.map(({ status, label }) => (
-              <Column
-                key={status}
-                status={status}
-                label={label}
-                week={week}
-                tasks={visible.filter((t) => t.status === status)}
-                total={tasks.filter((t) => t.status === status).length}
-                projectOf={projectOf}
-                loading={board.status === "loading"}
-                onOpen={openTask}
-                onAdd={openCreate}
-              />
-            ))}
+        {phone ? (
+          <MobileBoard
+            dragging={activeId !== null}
+            columns={COLUMNS.map(({ status }) => ({
+              shown: visible.filter((t) => t.status === status).length,
+              total: tasks.filter((t) => t.status === status).length,
+            }))}
+            renderColumn={(status, label) => renderColumn(status, label, "h-full")}
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-x-auto max-[899px]:invisible">
+            <div className="grid h-full min-w-[916px] grid-cols-[minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)] grid-rows-[minmax(0,1fr)] gap-3">
+              {COLUMNS.map(({ status, label }) => renderColumn(status, label))}
+            </div>
           </div>
-        </div>
+        )}
         <DragOverlay dropAnimation={null}>
           {active && week && <CardPreview task={active} project={projectOf(active.projectId)} week={week} />}
         </DragOverlay>

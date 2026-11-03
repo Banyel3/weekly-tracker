@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 hidden h-dvh w-50 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar min-[900px]:block min-[1100px]:w-60">
         <Sidebar showBars="wide" />
       </aside>
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-2 min-[900px]:hidden">
+      <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-2 min-[900px]:hidden">
         <button
           ref={menuButton}
           type="button"

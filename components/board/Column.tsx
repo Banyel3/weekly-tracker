@@ -10,15 +10,7 @@ import type { WeekRange } from "@/lib/week";
 import type { Status } from "./dnd";
 import { TaskCard } from "./TaskCard";
 
-/** Narrow screens stack the columns, active work first. */
-const ORDER: Record<Status, string> = {
-  BACKLOG: "max-[599px]:order-4",
-  THIS_WEEK: "max-[599px]:order-2",
-  IN_PROGRESS: "max-[599px]:order-1",
-  DONE: "max-[599px]:order-3",
-};
-
-const statusVar = (status: Status) => `var(--status-${status.toLowerCase().replace("_", "-")})`;
+export const statusVar = (status: Status) => `var(--status-${status.toLowerCase().replace("_", "-")})`;
 
 type Props = {
   status: Status;
@@ -30,9 +22,10 @@ type Props = {
   loading: boolean;
   onOpen: (task: TaskDto) => void;
   onAdd: (status: Status) => void;
+  className?: string;
 };
 
-export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd }: Props) {
+export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd, className }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const headingId = `column-${status}`;
   const overLimit = status === "IN_PROGRESS" && total > WIP_LIMIT;
@@ -46,7 +39,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card transition-colors duration-150 ease-out motion-reduce:transition-none",
         overLimit && "border-[color:var(--alert)]",
         isOver && "border-primary",
-        ORDER[status],
+        className,
       )}
     >
       <div className="flex items-center gap-2 px-2.5 pt-2 pb-1.5">
@@ -74,7 +67,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
           </button>
         )}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1 max-[599px]:overflow-visible">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1">
         {loading ? (
           <>
             <div className="h-12 flex-none animate-pulse rounded-lg bg-muted/60 motion-reduce:animate-none" />
