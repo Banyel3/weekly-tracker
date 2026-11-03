@@ -110,7 +110,7 @@ Search with filters. Every field is optional.
   "query": "brief", "archived": false, "limit": 20 }
 ```
 
-`query` matches the title or note (case-insensitive). `archived: true` searches archived tasks instead of live ones. `limit` is 1–100, default 50. Result: `{ "tasks": [TaskDto] }`, grouped by column and sorted like the board. Errors: `limit` over 100 (400), a bad status name (400), `due_from` after `due_to` (400), an unknown project (404).
+`query` matches the title or note (case-insensitive). `archived: true` searches archived tasks instead of live ones. `limit` is 1–100, default 50; when more tasks match, you get the soonest-due ones (undated tasks last, then oldest first). Result: `{ "tasks": [TaskDto] }`, grouped by column and sorted like the board. Errors: `limit` over 100 (400), a bad status name (400), `due_from` after `due_to` (400), an unknown project (404).
 
 ### 4. `get_task`
 

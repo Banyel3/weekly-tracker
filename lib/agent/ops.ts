@@ -109,6 +109,11 @@ async function existingTask(id: string) {
   return task;
 }
 
+export const LIST_ORDER: Prisma.TaskOrderByWithRelationInput[] = [
+  { dueDate: { sort: "asc", nulls: "last" } },
+  { createdAt: "asc" },
+];
+
 const byStatusThenColumn = (tasks: TaskDto[], weekStart: string) =>
   Object.values(Status).flatMap((status) =>
     sortColumn(
@@ -173,7 +178,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "list_tasks",
     description:
-      "Search tasks with filters. Returns live (non-archived) tasks unless archived is true. Results are grouped by column and sorted the way the board sorts them (priority, due date, age).",
+      "Search tasks with filters. Returns live (non-archived) tasks unless archived is true. When more tasks match than limit, you get the soonest-due ones (undated last, then oldest first). Results are grouped by column and sorted the way the board sorts them (priority, due date, age).",
     input_schema: objectSchema({
       status: { type: "array", items: statusProp, minItems: 1, description: "Only these columns" },
       project: { type: "string", description: "Project name (case-insensitive exact match)" },
@@ -224,7 +229,8 @@ const TOOLS: ToolSpec[] = [
       };
       const rows = await prisma.task.findMany({
         where,
-        orderBy: { createdAt: "asc" },
+        // Priority is an enum Postgres cannot rank like the board, so the page is the soonest-due N; sortColumn orders it.
+        orderBy: LIST_ORDER,
         take: input.limit ?? LIST_LIMIT_DEFAULT,
       });
       return { tasks: byStatusThenColumn(rows.map(toDto), currentWeekStart(now)) };
@@ -276,8 +282,7 @@ const TOOLS: ToolSpec[] = [
         .strict(),
     run: async (input) => {
       const project = input.project ? await findOrCreateProjectByName(input.project) : null;
-      const task = await createTask(
-        createTaskSchema.parse({
+      const parsed = createTaskSchema.safeParse({
           title: input.title,
           note: input.note ?? null,
           dueDate: input.due ?? null,
@@ -285,9 +290,10 @@ const TOOLS: ToolSpec[] = [
           status: input.status,
           projectId: project?.id ?? null,
           checklist: (input.checklist ?? []).map((text) => ({ text })),
-        }),
-      );
-      return { task };
+      });
+      // The agent schema mirrors createTaskSchema; if they ever drift, answer 400 rather than 500.
+      if (!parsed.success) throw new AgentError(400, issuesToString(parsed.error));
+      return { task: await createTask(parsed.data) };
     },
   }),
   tool({
@@ -354,7 +360,7 @@ const TOOLS: ToolSpec[] = [
   }),
   tool({
     name: "snooze_task",
-    description: `Push a task's due date. With until, the due date becomes that day. Otherwise it moves days ahead (default 1, at most ${SNOOZE_DAYS_MAX}) from the later of today and the current due date, so an overdue task lands days after today. Pass days or until, not both.`,
+    description: `Push a task's due date. With until, the due date becomes that day. Otherwise it moves days ahead (default 1, at most ${SNOOZE_DAYS_MAX}) from the later of today and the current due date, so an overdue task lands days after today. Pass days or until, not both; until must not be before today.`,
     input_schema: objectSchema(
       {
         id: idProp,

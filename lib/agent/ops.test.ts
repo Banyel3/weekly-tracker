@@ -1,6 +1,6 @@
 import type { Task } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 
 const { prisma, tx, getReview } = vi.hoisted(() => {
   const tx = {
@@ -19,7 +19,8 @@ const { prisma, tx, getReview } = vi.hoisted(() => {
 vi.mock("../db", () => ({ prisma }));
 vi.mock("../review", () => ({ getReview }));
 
-import { AGENT_TOOLS, mergeChecklist, runTool, toolInputSchema, toolResponse } from "./ops";
+import { createTaskSchema } from "../tasks";
+import { AGENT_TOOLS, LIST_ORDER, mergeChecklist, runTool, toolInputSchema, toolResponse } from "./ops";
 
 // Wed 2026-11-04 10:00 Manila.
 const NOW = new Date("2026-11-04T02:00:00.000Z");
@@ -215,7 +216,7 @@ describe("get_board", () => {
 describe("list_tasks", () => {
   it("defaults to live tasks, 50 at most", async () => {
     await ok("list_tasks");
-    expect(prisma.task.findMany).toHaveBeenCalledWith({ where: { archived: false }, orderBy: { createdAt: "asc" }, take: 50 });
+    expect(prisma.task.findMany).toHaveBeenCalledWith({ where: { archived: false }, orderBy: LIST_ORDER, take: 50 });
   });
 
   it("builds every filter", async () => {
@@ -232,9 +233,16 @@ describe("list_tasks", () => {
           { note: { contains: "brief", mode: "insensitive" } },
         ],
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: LIST_ORDER,
       take: 100,
     });
+  });
+
+  it("pages by soonest due date, undated last, then age", async () => {
+    await ok("list_tasks", { limit: 2 });
+    expect(LIST_ORDER).toEqual([{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }]);
+    expect((prisma.task.findMany.mock.calls[0] as any)[0]).toMatchObject({ orderBy: LIST_ORDER, take: 2 });
+    expect(AGENT_TOOLS.find((t) => t.name === "list_tasks")!.description).toContain("soonest-due");
   });
 
   it("accepts a comma-separated status string", async () => {
@@ -323,6 +331,12 @@ describe("create_task", () => {
 
   it("rejects a bad date", async () => {
     await fails("create_task", { title: "x", due: "next friday" }, 400, "due: must be YYYY-MM-DD, today or tomorrow");
+    expect(tx.task.create).not.toHaveBeenCalled();
+  });
+
+  it("answers 400, not 500, if createTaskSchema rejects what the agent schema accepted", async () => {
+    vi.spyOn(createTaskSchema, "safeParse").mockReturnValueOnce(z.object({ title: z.string().max(3) }).safeParse({ title: "long" }) as never);
+    await fails("create_task", { title: "long" }, 400, /^title: /);
     expect(tx.task.create).not.toHaveBeenCalled();
   });
 
@@ -428,6 +442,7 @@ describe("snooze_task", () => {
 
   it("rejects until before today", async () => {
     await fails("snooze_task", { id: "t1", until: "2026-11-03" }, 400, "until is before today (2026-11-04)");
+    expect(AGENT_TOOLS.find((t) => t.name === "snooze_task")!.description).toContain("until must not be before today");
   });
 
   it("rejects days over 60", async () => {
