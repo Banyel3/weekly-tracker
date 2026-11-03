@@ -22,7 +22,7 @@ Every route under `/api/agent/` requires `Authorization: Bearer <token>`.
 | `AGENT_API_TOKEN` unset or empty | 503 | `{ "error": "agent api disabled: set AGENT_API_TOKEN" }` |
 | Header missing, not `Bearer`, or wrong token | 401 | `{ "error": "unauthorized" }` |
 
-The token is compared in constant time. The board's own routes (`/api/tasks`, `/api/board`, …) stay unauthenticated and unchanged; keep the app on localhost or Tailscale as before.
+The token is compared in constant time. It protects only `/api/agent/**`. The board's own routes (`/api/tasks`, `/api/board`, …) stay unauthenticated, so anyone on the tailnet can use the board: keep the app on localhost or `tailscale serve`, never `tailscale funnel`, and run a hosted bot as a tailnet member.
 
 ## Conventions
 
@@ -245,7 +245,7 @@ ANTHROPIC_API_KEY=… TRACKER_URL=http://localhost:3000 AGENT_API_TOKEN=… \
 ## Limits
 
 - Request bodies over 64 kB are rejected with 413.
-- `list_tasks` returns at most 100 tasks; every list query is bounded.
+- `list_tasks` returns at most 100 tasks. `get_board`, `get_today` and `list_projects` return the whole board, like the UI does; that is fine for one person's tasks.
 - There is no rate limiting beyond the body cap; the token is the only gate.
 
 ## Later

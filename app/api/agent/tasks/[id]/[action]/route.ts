@@ -6,16 +6,16 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string; action: string }> };
 
 /** Column shortcuts for move_task; the body is ignored. */
-const MOVES: Record<string, string> = { done: "done", start: "in_progress", plan: "this_week", backlog: "backlog" };
+const MOVES = new Map([["done", "done"], ["start", "in_progress"], ["plan", "this_week"], ["backlog", "backlog"]]);
 
 /** Actions whose optional body becomes the tool input (snooze: days / until; restore: status). */
-const WITH_BODY: Record<string, string> = { snooze: "snooze_task", restore: "restore_task" };
+const WITH_BODY = new Map([["snooze", "snooze_task"], ["restore", "restore_task"]]);
 
 export async function POST(request: Request, { params }: Context) {
   const { id, action } = await params;
-  const move = MOVES[action];
+  const move = MOVES.get(action);
   if (move) return restTool(request, "move_task", { id, status: move });
-  const tool = WITH_BODY[action];
+  const tool = WITH_BODY.get(action);
   if (tool) return restTool(request, tool, bodyWithId(request, id));
   return requireAgent(request) ?? notFound(`unknown action: ${action}`);
 }

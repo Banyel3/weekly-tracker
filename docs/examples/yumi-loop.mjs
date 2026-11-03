@@ -5,8 +5,12 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const { TRACKER_URL, AGENT_API_TOKEN } = process.env;
 const headers = { authorization: `Bearer ${AGENT_API_TOKEN}`, "content-type": "application/json" };
-const tracker = (path, body) =>
-  fetch(`${TRACKER_URL}${path}`, body ? { method: "POST", headers, body: JSON.stringify(body) } : { headers }).then((r) => r.json());
+const tracker = async (path, body) => {
+  const r = await fetch(`${TRACKER_URL}${path}`, body ? { method: "POST", headers, body: JSON.stringify(body) } : { headers });
+  const json = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
+  if (!r.ok && path !== "/api/agent/run") throw new Error(`${path}: ${json.error ?? r.status}`);
+  return json;
+};
 
 const client = new Anthropic();
 const { tools } = await tracker("/api/agent/tools");
@@ -28,13 +32,13 @@ for (let turn = 0; turn < 8; turn++) {
     console.log(response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n"));
     break;
   }
+  // Tool calls run one at a time so two changes to the same task land in Claude's order.
   // Every tool_result goes back in one user message; a failed call is reported, not dropped.
-  const results = await Promise.all(
-    calls.map(async (call) => {
-      const out = await tracker("/api/agent/run", { name: call.name, input: call.input });
-      const content = JSON.stringify(out.ok ? out.result : { error: out.error });
-      return { type: "tool_result", tool_use_id: call.id, content, is_error: !out.ok };
-    }),
-  );
+  const results = [];
+  for (const call of calls) {
+    const out = await tracker("/api/agent/run", { name: call.name, input: call.input });
+    const content = JSON.stringify(out.ok ? out.result : { error: out.error });
+    results.push({ type: "tool_result", tool_use_id: call.id, content, is_error: !out.ok });
+  }
   messages.push({ role: "user", content: results });
 }
