@@ -1,5 +1,5 @@
 import { isPrismaError, parseBody, unknownProject } from "@/lib/http";
-import { deleteTask, updateTask, updateTaskSchema } from "@/lib/tasks";
+import { deleteTask, RestoreFirstError, updateTask, updateTaskSchema } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ export async function PATCH(request: Request, { params }: Context) {
     return task ? Response.json(task) : notFound();
   } catch (e) {
     if (isPrismaError(e, "P2003")) return unknownProject();
+    if (e instanceof RestoreFirstError) return Response.json({ error: e.message }, { status: 400 });
     throw e;
   }
 }

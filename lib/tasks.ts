@@ -198,12 +198,27 @@ export function updateData(input: UpdateTaskInput, existing: Task, now: Date): P
   };
 }
 
+export const RESTORE_FIRST = "restore the task before changing its status";
+
+/** A status change would move an archived task into this week while it stays archived. */
+export class RestoreFirstError extends Error {
+  constructor() {
+    super(RESTORE_FIRST);
+    this.name = "RestoreFirstError";
+  }
+}
+
+function needsRestoreFirst(input: UpdateTaskInput, existing: Task): boolean {
+  return existing.archived && input.status !== undefined && input.archived !== false;
+}
+
 /** existing is read inside the transaction so the events and completedAt follow the row the update replaces. */
 export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
   const now = new Date();
   const task = await prisma.$transaction(async (tx) => {
     const existing = await tx.task.findUnique({ where: { id } });
     if (!existing) return null;
+    if (needsRestoreFirst(input, existing)) throw new RestoreFirstError();
     const updated = await tx.task.update({ where: { id }, data: updateData(input, existing, now) });
     await recordEvents(tx, withTask(id, updateEvents(input, existing)), now);
     return updated;
