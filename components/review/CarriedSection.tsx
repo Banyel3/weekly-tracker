@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useReducer, useRef } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
@@ -62,9 +63,11 @@ export function CarriedSection({ carried }: Props) {
 
   return (
     <section aria-labelledby="review-carried" className={CARD}>
-      <h3 id="review-carried" className={cn(TITLE, "flex items-baseline gap-2.5")}>
+      <h3 id="review-carried" className={cn(TITLE, "flex items-center gap-2")}>
         Carried over from last week
-        <span className="text-xs font-normal text-muted-foreground tabular-nums">{carried.length}</span>
+        <Badge variant="outline" className="h-[18px] min-w-[18px] px-1.5 text-[11px] font-normal text-muted-foreground tabular-nums">
+          {carried.length}
+        </Badge>
       </h3>
       {rows.length === 0 ? (
         <p className="m-0 text-sm text-muted-foreground">nothing carried over</p>
