@@ -3,6 +3,10 @@
 import { useDroppable } from "@dnd-kit/core";
 import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import { WIP_LIMIT } from "@/lib/constants";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
@@ -46,12 +50,12 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         className,
       )}
     >
-      <div className="flex items-center gap-2 px-2.5 pt-2 pb-1.5">
+      <div className="flex items-center gap-2 px-2.5 pt-2.5 pb-2">
         <h2 id={headingId} className="m-0">
-          <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted py-0.5 pr-2.5 pl-2 text-xs leading-4 font-semibold">
+          <Badge variant="outline" className="gap-1.5 px-2 py-0.5 text-xs font-medium">
             <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: statusVar(status) }} />
             {label}
-          </span>
+          </Badge>
         </h2>
         {week && (
           <span className={cn("text-xs tabular-nums", overLimit ? "text-[color:var(--alert)]" : "text-muted-foreground")}>
@@ -60,15 +64,18 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
           </span>
         )}
         {week && (
-          <button
-            type="button"
-            aria-label="add task"
-            aria-describedby={headingId}
-            onClick={() => onAdd(status)}
-            className="ml-auto grid size-6 place-items-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:size-11"
-          >
-            <Plus aria-hidden="true" className="size-4" />
-          </button>
+          <Hint label="Add task">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Add task"
+              aria-describedby={headingId}
+              onClick={() => onAdd(status)}
+              className="ml-auto size-7 text-muted-foreground hover:text-foreground pointer-coarse:size-11"
+            >
+              <Icon icon={Plus} />
+            </Button>
+          </Hint>
         )}
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1">
@@ -80,7 +87,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         ) : (
           week && (
             <>
-              {tasks.length === 0 && <p className="m-0 px-0.5 py-1 text-sm text-muted-foreground">nothing here</p>}
+              {tasks.length === 0 && <p className="m-0 px-0.5 py-1 text-xs text-muted-foreground">nothing here</p>}
               <AnimatePresence mode="popLayout" initial={false}>
                 {tasks.map((task) => (
                   <TaskCard
@@ -100,13 +107,15 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         )}
       </div>
       {week && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onAdd(status)}
-          className="mx-2 mb-2 flex-none self-start rounded-md px-1.5 py-1 text-left text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+          className="mx-2 mb-2 flex-none self-start text-muted-foreground hover:text-foreground pointer-coarse:h-11"
         >
-          + add
-        </button>
+          <Icon icon={Plus} size="sm" />
+          Add
+        </Button>
       )}
     </section>
   );

@@ -64,7 +64,7 @@ function BarChart<T extends Record<string, unknown>>({
             interval={0}
             height={18}
             tickFormatter={tickFormatter}
-            tick={{ fontSize: 11, style: { fill: "var(--muted-foreground)" } }}
+            tick={{ fontSize: 10, style: { fill: "var(--muted-foreground)" } }}
           />
           <YAxis hide domain={[0, "dataMax"]} allowDecimals={false} />
           {(Array.isArray(category) ? category : [category]).map((key) => (

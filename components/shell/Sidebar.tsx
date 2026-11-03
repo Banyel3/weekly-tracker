@@ -19,14 +19,14 @@ import { NavItem, SoonItem } from "./NavItem";
 import { ProjectsList } from "./ProjectsList";
 import { ThemePicker } from "./ThemePicker";
 
-const GROUP_LABEL = "px-2 pb-1 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground";
+const GROUP_LABEL = "px-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground";
 
 const SOON = [
-  { icon: Inbox, label: "Inbox · quick capture" },
+  { icon: Inbox, label: "Quick capture" },
   { icon: Repeat, label: "Recurring tasks" },
   { icon: Send, label: "Telegram digest" },
   { icon: Sparkles, label: "Someday / maybe" },
-  { icon: Command, label: "Shortcuts · ⌘K" },
+  { icon: Command, label: "Shortcuts" },
 ];
 
 type Props = { showBars: "always" | "wide"; onNavigate?: () => void };
@@ -39,7 +39,7 @@ export function Sidebar({ showBars, onNavigate }: Props) {
   return (
     <div className="flex min-h-full flex-col gap-[22px] px-4 py-5 text-sidebar-foreground">
       <header className="flex min-h-5 flex-col gap-1 pr-6">
-        {week && <h1 className="m-0 text-[15px] leading-5 font-medium">{formatWeekRange(week)}</h1>}
+        {week && <h1 className="m-0 text-sm leading-5 font-medium">{formatWeekRange(week)}</h1>}
         {rolledBack > 0 && (
           <p className="m-0 text-xs text-muted-foreground tabular-nums">{rolledBack} back from last week</p>
         )}

@@ -14,6 +14,9 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { todayYmd, weekRange } from "@/lib/week";
 import { useBoardContext } from "../BoardProvider";
@@ -30,8 +33,7 @@ type View = "week" | "month";
 
 const MonthView = dynamic(() => import("./MonthView").then((m) => m.MonthView), { ssr: false });
 
-const NAV =
-  "grid size-7 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:size-11";
+const NAV = "size-7 text-muted-foreground hover:text-foreground pointer-coarse:size-11";
 const TOGGLE =
   "h-7 px-2.5 text-xs font-normal text-muted-foreground data-[state=on]:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11";
 
@@ -90,7 +92,7 @@ export function WeekCalendar() {
       className="flex flex-none flex-col overflow-hidden rounded-xl border bg-card text-card-foreground max-[899px]:scroll-mt-16"
     >
       <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3.5 py-2">
-        <h2 id="cal-heading" className="m-0 text-[13px] leading-5 font-semibold">
+        <h2 id="cal-heading" className="m-0 text-sm leading-5 font-medium">
           {view === "week" ? "Week" : "Month"}
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -100,25 +102,31 @@ export function WeekCalendar() {
         <div className="ml-auto flex items-center gap-2">
           {view === "month" && (
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                aria-label="previous month"
-                onClick={() => setMonth((m) => shiftMonth(m, -1))}
-                className={NAV}
-              >
-                <ChevronLeft aria-hidden="true" className="size-4" />
-              </button>
+              <Hint label="Previous month">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="previous month"
+                  onClick={() => setMonth((m) => shiftMonth(m, -1))}
+                  className={NAV}
+                >
+                  <Icon icon={ChevronLeft} />
+                </Button>
+              </Hint>
               <span aria-live="polite" className="min-w-[7.5rem] text-center text-xs font-medium tabular-nums">
                 {fmtYmd(`${month.year}-${String(month.month).padStart(2, "0")}-01`, "MMMM yyyy")}
               </span>
-              <button
-                type="button"
-                aria-label="next month"
-                onClick={() => setMonth((m) => shiftMonth(m, 1))}
-                className={NAV}
-              >
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </button>
+              <Hint label="Next month">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="next month"
+                  onClick={() => setMonth((m) => shiftMonth(m, 1))}
+                  className={NAV}
+                >
+                  <Icon icon={ChevronRight} />
+                </Button>
+              </Hint>
             </div>
           )}
           <ToggleGroup

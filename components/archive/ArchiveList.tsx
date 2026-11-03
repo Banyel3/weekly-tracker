@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import type { TaskDto } from "@/lib/tasks";
 import { TIMEZONE, ymdToDate } from "@/lib/week";
 import { useBoardContext } from "../BoardProvider";
 import { colorVar } from "../ColorSwatches";
-import { PriorityDot } from "../board/PriorityPills";
+import { PriorityFlag } from "../board/PriorityPills";
 import { SearchField } from "../board/SearchField";
 import { TaskDialog } from "../board/TaskDialog";
 import { UndoLine } from "../board/UndoLine";
@@ -83,7 +85,7 @@ export function ArchiveList() {
   return (
     <section aria-labelledby="archive-heading" className="flex flex-col gap-4">
       <div className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 id="archive-heading" className="m-0 text-[13px] leading-5 font-semibold">
+        <h2 id="archive-heading" className="m-0 text-sm leading-5 font-medium">
           Archive
         </h2>
         <UndoLine returnFocusTo={SEARCH_ID} />
@@ -103,13 +105,9 @@ export function ArchiveList() {
       {archive.status === "error" && (
         <p className="m-0 text-sm text-muted-foreground">
           couldn&apos;t load the archive ·{" "}
-          <button
-            type="button"
-            onClick={archive.retry}
-            className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
+          <Button variant="link" size="inline" onClick={archive.retry} className="text-foreground">
             retry
-          </button>
+          </Button>
         </p>
       )}
       {archive.status === "ready" && weeks.length === 0 && (
@@ -118,7 +116,7 @@ export function ArchiveList() {
       {archive.status === "ready" &&
         weeks.map((week) => (
           <section key={week.start} aria-labelledby={`week-${week.start}`} className="flex flex-col gap-1.5">
-            <h3 id={`week-${week.start}`} className="m-0 text-xs font-semibold text-muted-foreground">
+            <h3 id={`week-${week.start}`} className="m-0 text-xs font-medium text-muted-foreground">
               Week of {ymdLabel(week.start)} – {ymdLabel(week.end)}
             </h3>
             <ul className="m-0 flex list-none flex-col gap-1 rounded-xl border bg-card p-1.5">
@@ -131,17 +129,17 @@ export function ArchiveList() {
                       onClick={() => setOpen(task)}
                       className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
                     >
-                      <PriorityDot priority={task.priority} />
+                      <PriorityFlag priority={task.priority} />
                       <span className="min-w-0 flex-1 truncate">{task.title}</span>
                       {project && (
-                        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="max-w-[40%] min-w-0 gap-1.5 px-2 py-0.5 font-normal text-muted-foreground">
                           <span
                             aria-hidden="true"
-                            className="size-2 shrink-0 rounded-full"
+                            className="size-1.5 shrink-0 rounded-full"
                             style={{ background: colorVar(project.color) }}
                           />
                           <span className="truncate">{project.name}</span>
-                        </span>
+                        </Badge>
                       )}
                       <span className="w-12 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
                         {completedLabel(task)}
@@ -156,24 +154,21 @@ export function ArchiveList() {
       {archive.status === "ready" && archive.moreFailed && (
         <p role="alert" className="m-0 text-sm text-muted-foreground">
           couldn&apos;t load more ·{" "}
-          <button
-            type="button"
-            onClick={archive.older}
-            className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
-          >
+          <Button variant="link" size="inline" onClick={archive.older} className="text-foreground">
             retry
-          </button>
+          </Button>
         </p>
       )}
       {archive.status === "ready" && archive.nextBefore && !archive.moreFailed && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={archive.older}
           disabled={archive.loadingMore}
-          className="min-h-8 self-start rounded-md px-2 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pointer-coarse:min-h-11"
+          className="self-start text-muted-foreground hover:text-foreground pointer-coarse:h-11"
         >
-          {archive.loadingMore ? "loading…" : "older"}
-        </button>
+          {archive.loadingMore ? "loading…" : "Older weeks"}
+        </Button>
       )}
       <TaskDialog
         target={target}

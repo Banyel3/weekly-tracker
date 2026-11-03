@@ -6,6 +6,7 @@ import { useBoardContext } from "@/components/BoardProvider";
 import { ColorSwatches, colorVar } from "@/components/ColorSwatches";
 import { useFilters } from "@/components/useFilters";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import type { ProjectFailure } from "@/components/useBoard";
@@ -70,7 +71,7 @@ export function ProjectsList({ showBars }: Props) {
 
   return (
     <section aria-labelledby="projects-heading" className="flex flex-col gap-1.5">
-      <h2 id="projects-heading" className="m-0 px-2 text-xs font-semibold text-muted-foreground">
+      <h2 id="projects-heading" className="m-0 px-2 text-xs font-medium text-muted-foreground">
         Projects
       </h2>
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
@@ -95,9 +96,10 @@ export function ProjectsList({ showBars }: Props) {
             {notice.again && (
               <>
                 {" · "}
-                <button
-                  type="button"
-                  className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <Button
+                  variant="link"
+                  size="inline"
+                  className="text-foreground"
                   onClick={() => {
                     const again = notice.again;
                     setNotice(null);
@@ -105,7 +107,7 @@ export function ProjectsList({ showBars }: Props) {
                   }}
                 >
                   retry
-                </button>
+                </Button>
               </>
             )}
           </p>
@@ -114,15 +116,17 @@ export function ProjectsList({ showBars }: Props) {
       {adding ? (
         <NewProjectForm onDone={closeForm} />
       ) : (
-        <button
+        <Button
           ref={addRef}
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setAdding(true)}
-          className="flex min-h-8 items-center gap-1.5 self-start rounded-md px-2 py-1.5 text-[13px] text-muted-foreground outline-none hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+          className="self-start text-muted-foreground pointer-coarse:h-11"
         >
-          <Plus aria-hidden="true" className="size-3.5" />
-          project
-        </button>
+          <Icon icon={Plus} size="sm" />
+          Add project
+        </Button>
       )}
     </section>
   );

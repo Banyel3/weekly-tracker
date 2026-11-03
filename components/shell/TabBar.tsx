@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Archive, BarChart3, CalendarDays, LayoutDashboard, Menu, type LucideIcon } from "lucide-react";
 import type { Ref } from "react";
 import { useBoardContext } from "@/components/BoardProvider";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { nudgeCount } from "../review/review";
 
@@ -13,14 +14,14 @@ const TAB =
 
 type TabProps = { icon: LucideIcon; label: string; current?: boolean; badge?: number };
 
-function TabContent({ icon: Icon, label, current, badge }: TabProps) {
+function TabContent({ icon, label, current, badge }: TabProps) {
   return (
     <>
       {current && <span aria-hidden="true" className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-primary" />}
       <span className="relative">
-        <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+        <Icon icon={icon} size="lg" />
         {badge !== undefined && badge > 0 && (
-          <span className="absolute -top-1.5 left-3.5 min-w-[18px] rounded-full bg-primary px-1 text-center text-[10px] leading-[16px] font-semibold text-primary-foreground tabular-nums">
+          <span className="absolute -top-1.5 left-3.5 min-w-[18px] rounded-full bg-primary px-1 text-center text-[10px] leading-[16px] font-medium text-primary-foreground tabular-nums">
             {badge}
             <span className="sr-only"> need attention</span>
           </span>

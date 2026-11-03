@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 export const ROW =
@@ -17,7 +19,7 @@ type Props = {
   onNavigate?: () => void;
 };
 
-export function NavItem({ href, icon: Icon, label, current = false, count, badge, onNavigate }: Props) {
+export function NavItem({ href, icon, label, current = false, count, badge, onNavigate }: Props) {
   return (
     <Link
       href={href}
@@ -28,7 +30,7 @@ export function NavItem({ href, icon: Icon, label, current = false, count, badge
         current ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50",
       )}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.8} />
+      <Icon icon={icon} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && (
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -37,12 +39,10 @@ export function NavItem({ href, icon: Icon, label, current = false, count, badge
         </span>
       )}
       {badge !== undefined && badge > 0 && (
-        <span
-          className="rounded-full bg-primary px-[7px] text-[11px] leading-[18px] font-semibold text-primary-foreground tabular-nums"
-        >
+        <Badge className="h-[18px] min-w-[18px] px-1.5 text-[11px] tabular-nums">
           {badge}
           <span className="sr-only"> need attention</span>
-        </span>
+        </Badge>
       )}
     </Link>
   );
@@ -50,7 +50,7 @@ export function NavItem({ href, icon: Icon, label, current = false, count, badge
 
 type SoonProps = { icon: LucideIcon; label: string };
 
-export function SoonItem({ icon: Icon, label }: SoonProps) {
+export function SoonItem({ icon, label }: SoonProps) {
   return (
     <button
       type="button"
@@ -58,9 +58,11 @@ export function SoonItem({ icon: Icon, label }: SoonProps) {
       aria-disabled="true"
       className={cn(ROW, "cursor-default border-0 bg-transparent text-muted-foreground opacity-60")}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.8} />
+      <Icon icon={icon} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <span className="rounded-lg border border-sidebar-border px-1.5 text-[10px] leading-4">soon</span>
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium text-muted-foreground">
+        soon
+      </Badge>
     </button>
   );
 }

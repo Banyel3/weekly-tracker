@@ -22,7 +22,7 @@ export function ColorSwatches({ value, onChange, legend = "Color", className }: 
   const name = useId();
   return (
     <fieldset className={cn("m-0 flex flex-wrap gap-1 border-0 p-0", className)}>
-      <legend className="mb-1 p-0 text-xs font-semibold text-muted-foreground">{legend}</legend>
+      <legend className="mb-1 p-0 text-xs font-medium text-muted-foreground">{legend}</legend>
       {COLORS.map((color) => (
         <label
           key={color}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import { UNDO_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { haptic } from "../haptics";
@@ -8,9 +9,6 @@ import { useIsPhone } from "../useMediaQuery";
 import { useUndo } from "../useUndo";
 
 type Props = { className?: string; returnFocusTo?: string };
-
-const UNDO_BUTTON =
-  "rounded-sm text-foreground underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 pointer-coarse:px-2";
 
 export function UndoLine({ className, returnFocusTo }: Props) {
   const { line, undo } = useUndo();
@@ -24,8 +22,9 @@ export function UndoLine({ className, returnFocusTo }: Props) {
   }, [line, returnFocusTo]);
 
   const button = (
-    <button
-      type="button"
+    <Button
+      variant="link"
+      size="inline"
       data-undo-button
       onFocus={() => (focused.current = true)}
       onBlur={() => (focused.current = false)}
@@ -33,10 +32,10 @@ export function UndoLine({ className, returnFocusTo }: Props) {
         if (phone) haptic();
         void undo();
       }}
-      className={UNDO_BUTTON}
+      className="text-foreground"
     >
       undo
-    </button>
+    </Button>
   );
 
   if (phone) {

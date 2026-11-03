@@ -16,6 +16,7 @@ import {
   type DropAnimation,
 } from "@dnd-kit/core";
 import { LayoutGroup } from "motion/react";
+import { Button } from "@/components/ui/button";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -183,7 +184,7 @@ export function Board() {
   return (
     <section aria-labelledby="board-heading" className="flex min-h-[300px] flex-1 flex-col gap-3 max-[899px]:min-h-[60dvh] max-[899px]:flex-none">
       <div className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 id="board-heading" className={cn("m-0 text-[13px] leading-5 font-semibold", phone && "sr-only")}>
+        <h2 id="board-heading" className={cn("m-0 text-sm leading-5 font-medium", phone && "sr-only")}>
           Board
         </h2>
         <UndoLine returnFocusTo={SEARCH_ID} />
@@ -199,13 +200,9 @@ export function Board() {
         {board.error && (
           <p className="m-0">
             {ERROR_TEXT[board.error]} ·{" "}
-            <button
-              type="button"
-              onClick={board.retry}
-              className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
+            <Button variant="link" size="inline" onClick={board.retry} className="text-foreground">
               retry
-            </button>
+            </Button>
           </p>
         )}
       </div>

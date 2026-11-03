@@ -2,16 +2,20 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { formatInTimeZone } from "date-fns-tz";
-import { ArrowLeftRight, StickyNote } from "lucide-react";
+import { ArrowLeftRight, CalendarDays, ListChecks, StickyNote, Undo2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { ReactNode, Ref } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { todayYmd, ymdToDate, type WeekRange } from "@/lib/week";
 import { colorVar } from "../ColorSwatches";
 import type { CardData } from "./dnd";
-import { PriorityDot } from "./PriorityPills";
+import { PriorityFlag } from "./PriorityPills";
 
 type Due = { text: string; urgent: boolean };
 
@@ -21,7 +25,7 @@ function format(ymd: string, pattern: string): string {
 
 function dueLabel(dueDate: string, week: WeekRange, today: string): Due {
   if (dueDate === today) return { text: "today", urgent: true };
-  if (dueDate < today) return { text: `overdue · ${format(dueDate, "MMM d")}`, urgent: true };
+  if (dueDate < today) return { text: `overdue ${format(dueDate, "MMM d")}`, urgent: true };
   const inWeek = week.start <= dueDate && dueDate <= week.end;
   return { text: `due ${format(dueDate, inWeek ? "EEE" : "MMM d")}`, urgent: false };
 }
@@ -38,18 +42,22 @@ function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactN
   const lastWeek = task.rolledBackAt === week.start;
   if (!project && !due && !total && !urgent && !rolled && !lastWeek && !task.note && !action) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs leading-4 text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs leading-4 text-muted-foreground">
       {project && (
-        <span className="inline-flex min-w-0 items-center gap-1.5 [overflow-wrap:anywhere]">
-          <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: colorVar(project.color) }} />
-          {project.name}
-        </span>
+        <Badge variant="outline" className="max-w-full min-w-0 gap-1.5 px-2 py-0.5 font-normal text-muted-foreground">
+          <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: colorVar(project.color) }} />
+          <span className="truncate">{project.name}</span>
+        </Badge>
       )}
       {due && (
-        <span className={cn("tabular-nums", due.urgent && "text-[color:var(--alert)]")}>{due.text}</span>
+        <span className={cn("inline-flex items-center gap-1 tabular-nums", due.urgent && "text-[color:var(--alert)]")}>
+          <Icon icon={CalendarDays} size="sm" />
+          {due.text}
+        </span>
       )}
       {total > 0 && (
-        <span className="tabular-nums">
+        <span className="inline-flex items-center gap-1 tabular-nums">
+          <Icon icon={ListChecks} size="sm" />
           <span aria-hidden="true">
             {checked}/{total}
           </span>
@@ -60,15 +68,20 @@ function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactN
       )}
       {urgent && <span className="text-[color:var(--alert)]">urgent</span>}
       {rolled && (
-        <span title="rolled over">
-          <span aria-hidden="true">↩ {task.rolloverCount}</span>
+        <span title="rolled over" className="inline-flex items-center gap-1 tabular-nums">
+          <Icon icon={Undo2} size="sm" />
+          <span aria-hidden="true">{task.rolloverCount}</span>
           <span className="sr-only">rolled over {task.rolloverCount} weeks</span>
         </span>
       )}
-      {lastWeek && <span className="rounded-full border px-1.5">last week</span>}
+      {lastWeek && (
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium text-muted-foreground">
+          last week
+        </Badge>
+      )}
       {task.note && (
         <span className="inline-flex">
-          <StickyNote aria-hidden="true" className="size-3" />
+          <Icon icon={StickyNote} size="sm" />
           <span className="sr-only">has note</span>
         </span>
       )}
@@ -127,7 +140,7 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
       {...listeners}
     >
       <div className="flex items-start gap-2">
-        <PriorityDot priority={task.priority} className="mt-1.5" />
+        <PriorityFlag priority={task.priority} className="mt-[3px]" />
         <button
           ref={setActivatorNodeRef}
           {...attributes}
@@ -148,17 +161,20 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
         action={
           onMove &&
           !pending && (
-            <button
-              type="button"
-              aria-label={`Move “${task.title}”`}
-              aria-haspopup="dialog"
-              onClick={() => onMove(task)}
-              onPointerDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              className="-my-1 ml-auto grid size-7 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:-my-2.5 pointer-coarse:size-11"
-            >
-              <ArrowLeftRight aria-hidden="true" className="size-4" />
-            </button>
+            <Hint label="Move">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Move “${task.title}”`}
+                aria-haspopup="dialog"
+                onClick={() => onMove(task)}
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                className="-my-1 ml-auto size-7 text-muted-foreground hover:text-foreground pointer-coarse:-my-2.5 pointer-coarse:size-11"
+              >
+                <Icon icon={ArrowLeftRight} />
+              </Button>
+            </Hint>
           )
         }
       />
@@ -170,7 +186,7 @@ export function CardPreview({ task, project, week }: MetaProps) {
   return (
     <article className={cn(CARD, "cursor-grabbing border-primary", task.status === "DONE" && "opacity-60")}>
       <div className="flex items-start gap-2">
-        <PriorityDot priority={task.priority} className="mt-1.5" />
+        <PriorityFlag priority={task.priority} className="mt-[3px]" />
         <div className="line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]">
           {task.title}
         </div>

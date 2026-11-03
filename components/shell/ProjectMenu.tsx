@@ -8,6 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 export type ProjectAction = "rename" | "recolor" | "delete";
@@ -23,16 +26,22 @@ export const ProjectMenu = forwardRef<HTMLButtonElement, Props>(function Project
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        ref={ref}
-        aria-label={`${name} options`}
-        className={cn(
-          "grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors duration-150 ease-out outline-none hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-sidebar-accent motion-reduce:transition-none pointer-coarse:size-11",
-          className,
-        )}
-      >
-        <MoreHorizontal aria-hidden="true" className="size-4" />
-      </DropdownMenuTrigger>
+      <Hint label="Project options">
+        <DropdownMenuTrigger asChild>
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="icon"
+            aria-label={`${name} options`}
+            className={cn(
+              "size-7 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent pointer-coarse:size-11",
+              className,
+            )}
+          >
+            <Icon icon={MoreHorizontal} />
+          </Button>
+        </DropdownMenuTrigger>
+      </Hint>
       <DropdownMenuContent
         align="end"
         className="min-w-36"
@@ -45,15 +54,15 @@ export const ProjectMenu = forwardRef<HTMLButtonElement, Props>(function Project
         }}
       >
         <DropdownMenuItem onSelect={choose("rename")}>
-          <Pencil aria-hidden="true" />
+          <Icon icon={Pencil} />
           Rename
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={choose("recolor")}>
-          <Palette aria-hidden="true" />
+          <Icon icon={Palette} />
           Recolor
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onSelect={choose("delete")}>
-          <Trash2 aria-hidden="true" />
+          <Icon icon={Trash2} />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

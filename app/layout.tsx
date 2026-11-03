@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
 import { BoardProvider } from "@/components/BoardProvider";
 import { AppShell } from "@/components/shell/AppShell";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { DEFAULT_THEME, THEME_IDS, THEME_STORAGE_KEY } from "@/lib/themes";
 import "./globals.css";
 
@@ -28,9 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <BoardProvider>
-          <AppShell>{children}</AppShell>
-        </BoardProvider>
+        <TooltipProvider delayDuration={300}>
+          <BoardProvider>
+            <AppShell>{children}</AppShell>
+          </BoardProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

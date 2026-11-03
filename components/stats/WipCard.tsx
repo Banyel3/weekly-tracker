@@ -6,7 +6,7 @@ import { MovingBorderFrame } from "../aceternity/MovingBorder";
 import { useBoardContext } from "../BoardProvider";
 import { NumberTicker } from "../magic/NumberTicker";
 import { useReducedMotion } from "../motion/config";
-import { HEADING, KPI, KPI_UNIT, MUTED, StatCard } from "./StatCard";
+import { KPI, KPI_UNIT, MUTED, StatCard, StatHeader } from "./StatCard";
 import { wipLine } from "./stats";
 
 type Props = { overdue: number; carried: number };
@@ -18,25 +18,21 @@ export function WipCard({ overdue, carried }: Props) {
   const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS" && !t.archived).length;
   const over = inProgress > WIP_LIMIT;
   const card = (
-    <StatCard
-      labelledBy="stat-wip"
-      className={cn("grid grid-cols-2 gap-3", over && reduced && "border-[color:var(--alert)]")}
-    >
-      <div className="flex flex-col gap-0.5">
-        <h2 id="stat-wip" className={HEADING}>
-          In progress
-        </h2>
-        <p className={cn(KPI, over && "text-[color:var(--alert)]")}>
-          <NumberTicker value={inProgress} /> <span className={KPI_UNIT}>/ {WIP_LIMIT} limit</span>
-        </p>
-        <p className={MUTED}>{wipLine(inProgress)}</p>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <h3 className={HEADING}>Overdue</h3>
-        <p className={KPI}>
-          <NumberTicker value={overdue} />
-        </p>
-        <p className={MUTED}>{carried} carried over</p>
+    <StatCard labelledBy="stat-wip" className={cn(over && reduced && "border-[color:var(--alert)]")}>
+      <StatHeader id="stat-wip" title="In progress" hint={`limit ${WIP_LIMIT}`} />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-0.5">
+          <p className={cn(KPI, over && "text-[color:var(--alert)]")}>
+            <NumberTicker value={inProgress} /> <span className={KPI_UNIT}>/ {WIP_LIMIT}</span>
+          </p>
+          <p className={MUTED}>{wipLine(inProgress)}</p>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <p className={KPI}>
+            <NumberTicker value={overdue} /> <span className={KPI_UNIT}>overdue</span>
+          </p>
+          <p className={MUTED}>{carried} carried over</p>
+        </div>
       </div>
     </StatCard>
   );

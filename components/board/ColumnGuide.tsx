@@ -2,6 +2,8 @@
 
 import { useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { WIP_LIMIT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { guideLabels } from "./carousel";
@@ -60,15 +62,31 @@ export function ColumnGuide({ ref, index, columns, panelId, tabId, follow, onGo 
             exit={{ opacity: 0 }}
             className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-5"
           >
-            <span className="truncate text-muted-foreground">{left && `‹ ${left}`}</span>
-            <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold">
-              <span className="size-1.5 rounded-full" style={{ background: statusVar(status) }} />
-              {current}
-              <span className={cn("font-normal tabular-nums", overLimit ? "text-[color:var(--alert)]" : "text-muted-foreground")}>
-                · {overLimit ? `${total} / ${WIP_LIMIT}` : shown}
+            <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+              {left && (
+                <>
+                  <Icon icon={ChevronLeft} size="sm" />
+                  <span className="truncate">{left}</span>
+                </>
+              )}
+            </span>
+            <span className="inline-flex items-center gap-2.5 text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full" style={{ background: statusVar(status) }} />
+                {current}
+              </span>
+              <span className={cn("text-xs font-normal tabular-nums", overLimit ? "text-[color:var(--alert)]" : "text-muted-foreground")}>
+                {overLimit ? `${total} / ${WIP_LIMIT}` : shown}
               </span>
             </span>
-            <span className="truncate text-right text-muted-foreground">{right && `${right} ›`}</span>
+            <span className="flex min-w-0 items-center justify-end gap-1 text-muted-foreground">
+              {right && (
+                <>
+                  <span className="truncate">{right}</span>
+                  <Icon icon={ChevronRight} size="sm" />
+                </>
+              )}
+            </span>
           </motion.div>
         </AnimatePresence>
       </div>

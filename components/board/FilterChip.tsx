@@ -1,6 +1,11 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { ymdToDate } from "@/lib/week";
 import { useBoardContext } from "../BoardProvider";
@@ -18,21 +23,19 @@ export function FilterChip({ className }: { className?: string }) {
   if (!filter) return null;
   const label = labelOf(filter, (id) => projects.find((p) => p.id === id)?.name ?? "project");
   return (
-    <span
-      className={cn(
-        "inline-flex min-w-0 items-center gap-2 rounded-full border border-[color:color-mix(in_oklch,var(--border),white_12%)] px-2.5 py-0.5 text-xs",
-        className,
-      )}
-    >
+    <Badge variant="outline" className={cn("max-w-full min-w-0 gap-1 py-0 pr-0.5 pl-2 text-xs font-normal", className)}>
       <span className="truncate">{label}</span>
-      <button
-        type="button"
-        onClick={clear}
-        aria-label={`clear filter ${label}`}
-        className="rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 pointer-coarse:px-2"
-      >
-        clear
-      </button>
-    </span>
+      <Hint label="Clear filter">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={clear}
+          aria-label={`clear filter ${label}`}
+          className="size-5 rounded-full text-muted-foreground hover:text-foreground pointer-coarse:size-11"
+        >
+          <Icon icon={X} size="sm" />
+        </Button>
+      </Hint>
+    </Badge>
   );
 }

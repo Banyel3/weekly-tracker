@@ -17,6 +17,7 @@ export function percent(finished: number, planned: number): number {
 export function paceLine(finished: number, planned: number, today: string): string {
   if (planned === 0) return "nothing planned yet";
   const d = isoWeekday(today);
+  if (d === 1) return "day 1 of 7";
   return `day ${d} of 7 · on pace for ${Math.round((finished / d) * 7)}`;
 }
 

@@ -1,7 +1,9 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Palette } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { THEME_PREVIEWS, useTheme } from "@/components/useTheme";
 import { cn } from "@/lib/utils";
@@ -19,18 +21,19 @@ export function ThemePicker() {
   const { theme, setTheme, themes } = useTheme();
   const [open, setOpen] = useState(false);
   const current = themes.find((t) => t.id === theme) ?? themes[0];
-  const [primary, , , warm] = THEME_PREVIEWS[current.id];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex min-h-8 items-center whitespace-nowrap gap-2 self-start rounded-md px-2 py-1.5 text-xs text-muted-foreground outline-none hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11">
-        <span
-          aria-hidden="true"
-          className="size-3 rounded-full"
-          style={{ background: `linear-gradient(135deg, ${primary}, ${warm})` }}
-        />
-        Theme · {current.name}
-        <ChevronDown aria-hidden="true" className="size-3.5" />
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start px-2 text-xs font-normal text-muted-foreground hover:text-sidebar-foreground pointer-coarse:h-11"
+        >
+          <Icon icon={Palette} />
+          Theme · {current.name}
+          <Icon icon={ChevronDown} size="sm" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-60 p-1">
         <div role="radiogroup" aria-label="Theme" className="flex flex-col" onKeyDown={moveFocus}>
@@ -57,7 +60,7 @@ export function ThemePicker() {
                   ))}
                 </span>
                 <span className="flex-1">{t.name}</span>
-                {selected && <Check aria-hidden="true" className="size-4" />}
+                {selected && <Icon icon={Check} />}
               </button>
             );
           })}

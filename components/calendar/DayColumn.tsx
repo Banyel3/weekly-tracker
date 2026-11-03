@@ -46,10 +46,10 @@ export function DayColumn({ ymd, today, tasks, selected, projectOf, onToggleDay,
           past && !isToday ? "text-muted-foreground" : "text-foreground",
         )}
       >
-        <span className="text-[11px] font-semibold tracking-[0.02em]">{fmtYmd(ymd, "EEE").toUpperCase()}</span>
+        <span className="text-xs font-medium text-muted-foreground">{fmtYmd(ymd, "EEE")}</span>
         <span
           className={cn(
-            "text-[15px] font-medium tabular-nums",
+            "text-sm font-medium tabular-nums",
             isToday && "rounded-full bg-primary px-1.5 text-primary-foreground",
           )}
         >

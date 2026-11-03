@@ -24,7 +24,7 @@ export function MonthView({ month, today, tasksOn, projectOf, onOpen }: Props) {
     <div className="max-[899px]:min-w-[49rem]">
       <div aria-hidden="true" className="grid grid-cols-7 border-b">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-2 py-1.5 text-[11px] font-semibold tracking-[0.02em] text-muted-foreground">
+          <div key={d} className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
             {d}
           </div>
         ))}

@@ -7,7 +7,7 @@ export function InsightStat({ value, meaning }: Props) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="order-2 text-xs leading-4 text-muted-foreground">{meaning}</dt>
-      <dd className="order-1 m-0 text-[17px] leading-6 font-medium tabular-nums">{value}</dd>
+      <dd className="order-1 m-0 text-lg leading-6 font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }
