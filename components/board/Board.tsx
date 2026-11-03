@@ -184,7 +184,7 @@ export function Board() {
   }
 
   return (
-    <section aria-labelledby="board-heading" className="flex min-h-[300px] flex-1 flex-col gap-3 max-[899px]:min-h-[60dvh] max-[899px]:flex-none">
+    <section aria-labelledby="board-heading" className="flex min-h-[300px] flex-1 flex-col gap-3 max-[899px]:min-h-[40dvh] max-[899px]:flex-none">
       <div className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
         <h2 id="board-heading" className={cn("m-0 text-sm leading-5 font-medium", phone && "sr-only")}>
           Board

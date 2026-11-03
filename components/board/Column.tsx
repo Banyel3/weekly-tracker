@@ -70,7 +70,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         ) : (
           week && (
             <>
-              {tasks.length === 0 && <p className="m-0 px-0.5 py-1 text-xs text-muted-foreground">nothing here</p>}
+              {tasks.length === 0 && <p className="m-0 px-0.5 py-1 text-xs text-muted-foreground max-[899px]:my-auto max-[899px]:text-center">nothing here</p>}
               <AnimatePresence mode="popLayout" initial={false}>
                 {tasks.map((task) => (
                   <TaskCard
