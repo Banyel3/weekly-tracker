@@ -17,12 +17,13 @@ import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import { useBoardContext } from "../BoardProvider";
 import type { NewTask } from "../useBoard";
 import { useDebounced } from "../useDebounced";
+import { useTaskDialog } from "../useTaskDialog";
 import { matchesFilter, useFilters } from "../useFilters";
 import { Column } from "./Column";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { SearchField } from "./SearchField";
 import { CardPreview } from "./TaskCard";
-import { TaskDialog, type DialogTarget } from "./TaskDialog";
+import { TaskDialog } from "./TaskDialog";
 import { UndoLine } from "./UndoLine";
 
 const ERROR_TEXT = { load: "couldn't load the board", save: "couldn't save" };
@@ -54,7 +55,7 @@ export function Board() {
   const [q, setQ] = useBoardSearch();
   const { week, projects, tasks } = board;
   const visible = useMemo(() => tasks.filter((t) => matchesFilter(t, filter)), [tasks, filter]);
-  const [dialog, setDialog] = useState<DialogTarget | null>(null);
+  const { target: dialog, openTask, openCreate, close } = useTaskDialog();
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -132,8 +133,8 @@ export function Board() {
                 total={tasks.filter((t) => t.status === status).length}
                 projectOf={projectOf}
                 loading={board.status === "loading"}
-                onOpen={(task) => setDialog({ mode: "edit", task })}
-                onAdd={(initialStatus) => setDialog({ mode: "create", initialStatus })}
+                onOpen={openTask}
+                onAdd={openCreate}
               />
             ))}
           </div>
@@ -148,7 +149,7 @@ export function Board() {
         onCreateProject={(name, color) => board.addProject({ name, color })}
         onSubmit={onSubmit}
         onDelete={board.removeTask}
-        onClose={() => setDialog(null)}
+        onClose={close}
       />
     </section>
   );

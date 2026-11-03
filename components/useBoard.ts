@@ -6,7 +6,7 @@ import { localId } from "@/lib/localId";
 import type { BoardCounts, BoardDto, TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
 import { COLUMNS } from "./board/dnd";
-import { deletedLabel, movedLabel, type UndoSlot } from "./useUndo";
+import { deletedLabel, movedLabel, rescheduledLabel, type UndoSlot } from "./useUndo";
 
 type Status = TaskDto["status"];
 type Editable = "title" | "note" | "dueDate" | "status" | "projectId" | "priority" | "checklist";
@@ -59,6 +59,7 @@ export function useBoard(register: UndoSlot["register"]) {
   const [counts, setCounts] = useState<BoardCounts>({ live: 0, archived: 0, nudges: 0 });
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<BoardError>(null);
+  const [version, setVersion] = useState(0);
   const failed = useRef<(() => void) | null>(null);
   const hiddenTasks = useRef(new Set<string>());
   const hiddenProjects = useRef(new Set<string>());
@@ -67,6 +68,7 @@ export function useBoard(register: UndoSlot["register"]) {
 
   const replace = (id: string, next: TaskDto) => setTasks((ts) => ts.map((t) => (t.id === id ? next : t)));
   const bumpLive = (by: number) => setCounts((c) => ({ ...c, live: Math.max(0, c.live + by) }));
+  const bump = () => setVersion((v) => v + 1);
   const clearSaveError = () => setError((e) => (e === "save" ? null : e));
   const fail = (again: () => void) => {
     failed.current = again;
@@ -93,6 +95,7 @@ export function useBoard(register: UndoSlot["register"]) {
     );
     setStatus("ready");
     setError((e) => (e === "load" ? null : e));
+    bump();
   }, []);
 
   const patchTask = useCallback(async (id: string, patch: TaskPatch): Promise<Response | null> => {
@@ -106,6 +109,7 @@ export function useBoard(register: UndoSlot["register"]) {
       const res = await patchTask(before.id, { status: before.status, rolledBackAt: before.rolledBackAt });
       if (res?.ok) {
         replace(before.id, await res.json());
+        bump();
         return;
       }
       replace(before.id, after);
@@ -126,6 +130,7 @@ export function useBoard(register: UndoSlot["register"]) {
       }
       const moved: TaskDto = await res.json();
       replace(task.id, moved);
+      bump();
       register({ label: movedLabel(task.title, columnLabel(to)), undo: () => undoMove(task, moved) });
     },
     [patchTask, undoMove, register],
@@ -154,6 +159,7 @@ export function useBoard(register: UndoSlot["register"]) {
     });
     if (res?.ok) {
       replace(temp.id, await res.json());
+      bump();
       return;
     }
     setTasks((ts) => ts.filter((t) => t.id !== temp.id));
@@ -170,6 +176,7 @@ export function useBoard(register: UndoSlot["register"]) {
     if (!res?.ok) throw new Error(await errorText(res));
     const project: ProjectDto = await res.json();
     setProjects((ps) => sortProjects([...ps, project]));
+    bump();
     return project;
   }, []);
 
@@ -178,9 +185,31 @@ export function useBoard(register: UndoSlot["register"]) {
       const res = await patchTask(id, patch);
       if (!res?.ok) return errorText(res);
       replace(id, await res.json());
+      bump();
       return null;
     },
     [patchTask],
+  );
+
+  const rescheduleTask = useCallback(
+    async function reschedule(task: TaskDto, dueDate: string, undoable = true): Promise<void> {
+      clearSaveError();
+      replace(task.id, { ...task, dueDate });
+      const res = await patchTask(task.id, { dueDate });
+      if (!res?.ok) {
+        replace(task.id, task);
+        fail(() => reschedule(task, dueDate, undoable));
+        return;
+      }
+      const moved: TaskDto = await res.json();
+      replace(task.id, moved);
+      bump();
+      if (undoable && task.dueDate) {
+        const previous = task.dueDate;
+        register({ label: rescheduledLabel(task.title, dueDate), undo: () => reschedule(moved, previous, false) });
+      }
+    },
+    [patchTask, register],
   );
 
   const removeTask = useCallback(
@@ -202,6 +231,7 @@ export function useBoard(register: UndoSlot["register"]) {
           const res = await sendDelete(`/api/tasks/${task.id}`);
           if (res?.ok || res?.status === 404) {
             hiddenTasks.current.delete(task.id);
+            bump();
             return;
           }
           restore();
@@ -224,6 +254,7 @@ export function useBoard(register: UndoSlot["register"]) {
     });
     if (res?.ok) {
       put(await res.json());
+      bump();
       return null;
     }
     put(previous);
@@ -251,6 +282,7 @@ export function useBoard(register: UndoSlot["register"]) {
           const res = await sendDelete(`/api/projects/${id}`);
           if (res?.ok || res?.status === 404) {
             hiddenProjects.current.delete(id);
+            bump();
             return;
           }
           restore();
@@ -297,6 +329,7 @@ export function useBoard(register: UndoSlot["register"]) {
     tasks,
     status,
     error,
+    version,
     reload,
     moveTask,
     addTask,
@@ -304,6 +337,7 @@ export function useBoard(register: UndoSlot["register"]) {
     updateProject,
     removeProject,
     updateTask,
+    rescheduleTask,
     removeTask,
     retry,
   };

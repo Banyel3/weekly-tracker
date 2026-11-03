@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 
 export type JsonState<T> = { status: "loading" } | { status: "error" } | { status: "ready"; data: T };
 
-export function useJson<T>(url: string): JsonState<T> {
+/** A change of `refresh` refetches in place; the last good data stays shown meanwhile. */
+export function useJson<T>(url: string, refresh: unknown = null): JsonState<T> {
   const [state, setState] = useState<JsonState<T>>({ status: "loading" });
   useEffect(() => {
     let live = true;
@@ -15,6 +16,6 @@ export function useJson<T>(url: string): JsonState<T> {
     return () => {
       live = false;
     };
-  }, [url]);
+  }, [url, refresh]);
   return state;
 }
