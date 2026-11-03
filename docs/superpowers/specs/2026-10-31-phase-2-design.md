@@ -19,7 +19,7 @@ Visual reference the owner pointed at: the Synchro board on Dribbble (sidebar, c
 
 ## Non-goals (Phase 3 and later)
 
-Quick capture with inline parsing and keyboard shortcuts / command palette; recurring tasks; Telegram morning digest with buttons and `/add` `/today` `/week`; Someday/Maybe parking and backlog aging; waiting-for flag; estimates and capacity hints; iCal feed; light theme variants; Tailscale Funnel or any public exposure; auth. The sidebar shows the Phase 3 items as disabled entries so the shell is final now.
+Quick capture with inline parsing and keyboard shortcuts / command palette; recurring tasks; notifications beyond the current Telegram reminder and Friday summary: a Telegram morning digest with Done/Snooze buttons and `/add` `/today` `/week` commands (long-polled from inside the container, no inbound port), plus Web Push from the app itself (service worker + VAPID; HTTPS via `tailscale serve`; on iOS only when added to the Home Screen), chosen by the owner on 2026-11-03 over ntfy/Pushover; Someday/Maybe parking and backlog aging; waiting-for flag; estimates and capacity hints; iCal feed; light theme variants; Tailscale Funnel or any public exposure; auth. The sidebar shows the Phase 3 items as disabled entries so the shell is final now.
 
 ## Anti-goals
 
