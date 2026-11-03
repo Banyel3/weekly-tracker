@@ -13,12 +13,14 @@ type Props = {
   today: string;
   tasks: TaskDto[];
   selected: boolean;
+  /** An empty week shows only the date row. */
+  collapsed?: boolean;
   projectOf: (id: string | null) => ProjectDto | null;
   onToggleDay: (ymd: string) => void;
   onOpen: (task: TaskDto) => void;
 };
 
-export function DayColumn({ ymd, today, tasks, selected, projectOf, onToggleDay, onOpen }: Props) {
+export function DayColumn({ ymd, today, tasks, selected, collapsed, projectOf, onToggleDay, onOpen }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: dayId(ymd), data: { ymd } });
   const isToday = ymd === today;
   const past = ymd < today;
@@ -30,7 +32,8 @@ export function DayColumn({ ymd, today, tasks, selected, projectOf, onToggleDay,
       data-today={isToday || undefined}
       aria-label={fmtYmd(ymd, "EEEE, MMM d")}
       className={cn(
-        "flex min-h-[150px] min-w-0 flex-col gap-1.5 border-t-2 border-r border-t-transparent border-r-border px-2 pt-2 pb-3 transition-colors duration-150 ease-out last:border-r-0 max-[899px]:snap-start",
+        "flex min-w-0 flex-col gap-1.5 border-t-2 border-r border-t-transparent border-r-border px-2 pt-2 transition-colors duration-150 ease-out last:border-r-0 max-[899px]:snap-start",
+        collapsed ? "min-h-14 pb-2" : "min-h-[150px] pb-3",
         isToday && "bg-muted",
         selected && "border-t-primary",
         isOver && "bg-accent",

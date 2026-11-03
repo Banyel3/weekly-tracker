@@ -59,6 +59,7 @@ export function WeekCalendar() {
   const [from, to] = [days[0], days[days.length - 1]];
   const visible = useMemo(() => calendarTasks(board.tasks, filter, from, to), [board.tasks, filter, from, to]);
   const tasksOn = (ymd: string) => visible.filter((t) => t.dueDate === ymd);
+  const collapsed = view === "week" && calendarTasks(board.tasks, null, from, to).length === 0;
   const projectsById = useMemo(() => new Map(board.projects.map((p) => [p.id, p])), [board.projects]);
   const projectOf = (id: string | null) => (id ? (projectsById.get(id) ?? null) : null);
   const active = board.tasks.find((t) => t.id === activeId) ?? null;
@@ -166,6 +167,7 @@ export function WeekCalendar() {
                   today={today}
                   tasks={tasksOn(ymd)}
                   selected={filter?.kind === "day" && filter.ymd === ymd}
+                  collapsed={collapsed}
                   projectOf={projectOf}
                   onToggleDay={toggleDay}
                   onOpen={openTask}
@@ -180,6 +182,11 @@ export function WeekCalendar() {
           <MonthView month={month} today={today} tasksOn={tasksOn} projectOf={projectOf} onOpen={openTask} />
         )}
       </div>
+      {collapsed && (
+        <p className="m-0 border-t px-3.5 py-2 text-xs text-muted-foreground">
+          no due dates this week · drag a card here or set a due date
+        </p>
+      )}
     </section>
   );
 }
