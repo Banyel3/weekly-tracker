@@ -49,6 +49,11 @@ describe("indexFromScroll", () => {
     expect(indexFromScroll(1062, 354, 4)).toBe(3);
   });
 
+  it("lands on pair starts at the tablet pitch", () => {
+    expect(indexFromScroll(0, 366, 4)).toBe(0);
+    expect(indexFromScroll(732, 366, 4)).toBe(2);
+  });
+
   it("clamps to the column range and survives a zero page width", () => {
     expect(indexFromScroll(5000, 354, 4)).toBe(3);
     expect(indexFromScroll(-40, 354, 4)).toBe(0);

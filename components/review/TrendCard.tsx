@@ -1,13 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Hint } from "@/components/ui/hint";
-import { Icon } from "@/components/ui/icon";
 import type { InsightsDto } from "@/lib/insights";
 import { completionLine, droppedLine, trendLabel } from "./review";
 import { CARD, MUTED, TITLE } from "./styles";
+
+// The tooltip stack is heavy for a route that needs it once; it loads after the page, in a box of the same size.
+const TrendInfo = dynamic(() => import("./TrendInfo").then((m) => m.TrendInfo), {
+  ssr: false,
+  loading: () => <span aria-hidden="true" className="size-6 pointer-coarse:size-11" />,
+});
 
 const TrendChart = dynamic(() => import("./TrendChart").then((m) => m.TrendChart), {
   ssr: false,
@@ -34,16 +36,7 @@ export function TrendCard({ trend, current }: { trend: InsightsDto["trend"]; cur
           <h3 id="review-trend" className={TITLE}>
             Planned vs finished
           </h3>
-          <Hint label="Planned counts every task put on a week; finished leaves out ones reopened that week; deleted tasks count only as dropped.">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="How planned and finished are counted"
-              className="size-6 text-muted-foreground hover:text-foreground pointer-coarse:size-11"
-            >
-              <Icon icon={Info} size="sm" />
-            </Button>
-          </Hint>
+          <TrendInfo />
         </div>
         <span className="flex gap-3 text-xs leading-4 text-muted-foreground">
           <Key color="var(--chart-2)" label="planned" />

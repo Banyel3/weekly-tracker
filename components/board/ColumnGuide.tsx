@@ -112,7 +112,7 @@ export function ColumnGuide({ ref, index, size, columns, panelId, tabId, follow,
             id={tabId(i)}
             type="button"
             role="tab"
-            aria-selected={i === index}
+            aria-selected={i >= index && i < index + size}
             aria-controls={panelId(i)}
             aria-label={`Go to ${label}`}
             tabIndex={i === index ? 0 : -1}
