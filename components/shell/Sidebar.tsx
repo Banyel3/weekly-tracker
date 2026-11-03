@@ -31,9 +31,14 @@ const SOON = [
   { icon: Command, label: "Shortcuts" },
 ];
 
-type Props = { showBars: "always" | "wide"; onNavigate?: () => void };
+type Props = {
+  showBars: "always" | "wide";
+  /** The sheet copy repeats the page title, so it renders it as plain text instead of a second h1. */
+  titleAs?: "h1" | "p";
+  onNavigate?: () => void;
+};
 
-export function Sidebar({ showBars, onNavigate }: Props) {
+export function Sidebar({ showBars, titleAs: Title = "h1", onNavigate }: Props) {
   const pathname = usePathname();
   const { week, tasks, counts, status } = useBoardContext();
   const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
@@ -41,7 +46,7 @@ export function Sidebar({ showBars, onNavigate }: Props) {
   return (
     <div className="flex min-h-full flex-col gap-[22px] px-4 py-5 text-sidebar-foreground">
       <header className="flex min-h-5 flex-col gap-1 pr-6">
-        {week && <h1 className="m-0 text-[15px] leading-5 font-semibold">{formatWeekRange(week)}</h1>}
+        {week && <Title className="m-0 text-[15px] leading-5 font-semibold">{formatWeekRange(week)}</Title>}
         {rolledBack > 0 && (
           <p className="m-0 text-xs text-muted-foreground tabular-nums">{rolledBack} back from last week</p>
         )}

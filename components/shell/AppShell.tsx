@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="w-60 max-w-[85vw] gap-0 overflow-y-auto border-sidebar-border bg-sidebar p-0 motion-reduce:animate-none sm:max-w-60"
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <Sidebar showBars="always" onNavigate={() => setOpen(false)} />
+          <Sidebar showBars="always" titleAs="p" onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
       <main className="min-w-0 flex-1 max-[899px]:pb-[calc(56px+env(safe-area-inset-bottom))]">{children}</main>
