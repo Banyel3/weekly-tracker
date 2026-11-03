@@ -120,7 +120,8 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
     disabled: pending,
   });
 
-  const opacity = isDragging ? 0.4 : pending || task.status === "DONE" ? 0.6 : 1;
+  const done = task.status === "DONE";
+  const opacity = isDragging ? 0.4 : pending ? 0.6 : 1;
   const moves = settle === undefined;
 
   return (
@@ -152,7 +153,10 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
           title={task.title}
           disabled={pending}
           onClick={() => onOpen(task)}
-          className="line-clamp-2 min-w-0 flex-1 cursor-[inherit] rounded-sm text-left text-sm leading-5 font-medium [overflow-wrap:anywhere] outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+          className={cn(
+            "line-clamp-2 min-w-0 flex-1 cursor-[inherit] rounded-sm text-left text-sm leading-5 font-medium [overflow-wrap:anywhere] outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11",
+            done && "text-muted-foreground",
+          )}
         >
           {task.title}
         </button>
@@ -187,10 +191,15 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
 
 export function CardPreview({ task, project, week }: MetaProps) {
   return (
-    <article className={cn(CARD, "cursor-grabbing border-primary", task.status === "DONE" && "opacity-60")}>
+    <article className={cn(CARD, "cursor-grabbing border-primary")}>
       <div className="flex items-start gap-2">
         <PriorityFlag priority={task.priority} decorative={urgentShown(task)} className="mt-[3px]" />
-        <div className="line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]">
+        <div
+          className={cn(
+            "line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]",
+            task.status === "DONE" && "text-muted-foreground",
+          )}
+        >
           {task.title}
         </div>
       </div>
