@@ -16,9 +16,9 @@ const ACTION =
 const statusLabel = (status: TaskDto["status"]) => COLUMNS.find((c) => c.status === status)?.label ?? status;
 
 type Focus = { id: string; target: "undo" | "action" };
-type Props = { carried: CarriedEntry[]; weekStart: string };
+type Props = { carried: CarriedEntry[] };
 
-export function CarriedSection({ carried, weekStart }: Props) {
+export function CarriedSection({ carried }: Props) {
   const board = useBoardContext();
   const undo = useUndo();
   const [decided, dispatch] = useReducer(decidedReducer, {});
@@ -40,7 +40,7 @@ export function CarriedSection({ carried, weekStart }: Props) {
     () => (board.status === "ready" ? new Map(board.tasks.map((t) => [t.id, t])) : null),
     [board.status, board.tasks],
   );
-  const rows = carriedRows(carried, decided, live, weekStart);
+  const rows = carriedRows(carried, decided, live);
   const projectOf = (id: string | null) => board.projects.find((p) => p.id === id) ?? null;
 
   async function act(row: CarriedRow, index: number, kind: Decision) {

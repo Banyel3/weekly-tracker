@@ -5,6 +5,7 @@ import {
   carriedRows,
   completionLine,
   daysText,
+  droppedLine,
   originLine,
   shareText,
   trendTick,
@@ -151,7 +152,7 @@ describe("carriedRows", () => {
       ["b", b.task],
       ["c", c.task],
     ]);
-    const rows = carriedRows([a, b, c], {}, live, MONDAY);
+    const rows = carriedRows([a, b, c], {}, live);
     expect(rows.map((r) => [r.entry.task.id, r.entry.task.title, r.decided])).toEqual([
       ["a", "renamed", null],
       ["b", "Task b", null],
@@ -159,13 +160,15 @@ describe("carriedRows", () => {
     ]);
   });
 
-  it("drops rows the board no longer has as carried and no decision covers", () => {
+  it("keeps a carried task moved to This week, showing its current column", () => {
     const live = new Map([["b", { ...b.task, status: "THIS_WEEK" as const, rolledBackAt: null }]]);
-    expect(carriedRows([a, b], {}, live, MONDAY)).toEqual([]);
+    expect(carriedRows([a, b], {}, live).map((r) => [r.entry.task.id, r.entry.task.status])).toEqual([
+      ["b", "THIS_WEEK"],
+    ]);
   });
 
   it("uses the review data as is before the board loads", () => {
-    expect(carriedRows([a, b], {}, null, MONDAY).map((r) => r.entry.task.id)).toEqual(["a", "b"]);
+    expect(carriedRows([a, b], {}, null).map((r) => r.entry.task.id)).toEqual(["a", "b"]);
   });
 
   it("keeps a decided row in place after it vanished from the refetched review", () => {
@@ -174,7 +177,7 @@ describe("carriedRows", () => {
       ["a", a.task],
       ["c", c.task],
     ]);
-    const rows = carriedRows([a, c], decided, live, MONDAY);
+    const rows = carriedRows([a, c], decided, live);
     expect(rows.map((r) => [r.entry.task.id, r.decided?.kind ?? null])).toEqual([
       ["a", null],
       ["b", "deleted"],
@@ -199,9 +202,11 @@ describe("insight text", () => {
   });
 
   it("sums the 8-week completion and omits it when nothing was planned", () => {
-    const week = (planned: number, finished: number) => ({ weekStart: MONDAY, planned, finished });
+    const week = (planned: number, finished: number, dropped = 0) => ({ weekStart: MONDAY, planned, finished, dropped });
     expect(completionLine([week(5, 3), week(3, 2)])).toBe("completion 63% over 2 weeks");
     expect(completionLine([week(0, 0)])).toBeNull();
+    expect(droppedLine([week(5, 3, 1), week(3, 2, 2)])).toBe("3 dropped");
+    expect(droppedLine([week(5, 3)])).toBeNull();
   });
 
   it("labels the current week and dates the rest", () => {

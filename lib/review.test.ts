@@ -47,8 +47,10 @@ const tasks: TaskDto[] = [
   task({ status: "IN_PROGRESS", weekOf: LAST, archived: true, dueDate: "2026-10-01" }),
 ];
 
+const carriedIds = tasks.filter((t) => t.rolledBackAt === THIS).map((t) => t.id);
+
 describe("buildReview", () => {
-  const review = buildReview(NOW, { tasks, projects });
+  const review = buildReview(NOW, { tasks, projects, carriedIds });
 
   it("reports the current week and Manila today", () => {
     expect(review.week).toEqual({ start: THIS, end: "2026-11-01" });
@@ -83,6 +85,22 @@ describe("buildReview", () => {
     ]);
   });
 
+  it("counts a carried task moved to This week as carried even after rolledBackAt was cleared", () => {
+    const moved = task({ status: "THIS_WEEK", weekOf: THIS, rolledBackAt: null, rolloverCount: 1 });
+    const backlog = task({ status: "BACKLOG", rolledBackAt: THIS });
+    const r = buildReview(NOW, { tasks: [moved, backlog], projects, carriedIds: [moved.id, backlog.id, "deleted"] });
+    expect(r.carried.map((c) => [c.task.id, c.task.status])).toEqual([
+      [moved.id, "THIS_WEEK"],
+      [backlog.id, "BACKLOG"],
+    ]);
+    expect(r.lastWeek.carried).toBe(2);
+  });
+
+  it("ignores rolledBackAt without a ROLLED_BACK event for this Monday", () => {
+    const r = buildReview(NOW, { tasks: [task({ rolledBackAt: THIS })], projects, carriedIds: [] });
+    expect(r.carried).toEqual([]);
+  });
+
   it("buckets finished tasks into the last 7 Manila days", () => {
     expect(review.perDay).toEqual([
       { day: "2026-10-23", finished: 1 },
@@ -96,14 +114,14 @@ describe("buildReview", () => {
   });
 
   it("treats a project missing from the list as No project", () => {
-    const r = buildReview(NOW, { tasks: [task({ weekOf: THIS, projectId: "gone" })], projects });
+    const r = buildReview(NOW, { tasks: [task({ weekOf: THIS, projectId: "gone" })], projects, carriedIds: [] });
     expect(r.thisWeek.byProject).toEqual([
       { projectId: null, name: "No project", color: "slate", planned: 1, finished: 0 },
     ]);
   });
 
   it("returns zeros for an empty board", () => {
-    const r = buildReview(NOW, { tasks: [], projects: [] });
+    const r = buildReview(NOW, { tasks: [], projects: [], carriedIds: [] });
     expect(r.thisWeek).toEqual({ planned: 0, finished: 0, inProgress: 0, overdue: 0, byProject: [] });
     expect(r.carried).toEqual([]);
     expect(r.perDay.every((d) => d.finished === 0)).toBe(true);

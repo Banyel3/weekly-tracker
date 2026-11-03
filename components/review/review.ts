@@ -47,6 +47,11 @@ export function completionLine(trend: InsightsDto["trend"]): string | null {
   return `completion ${Math.round((finished / planned) * 100)}% over ${trend.length} weeks`;
 }
 
+export function droppedLine(trend: InsightsDto["trend"]): string | null {
+  const dropped = trend.reduce((sum, w) => sum + w.dropped, 0);
+  return dropped > 0 ? `${dropped} dropped` : null;
+}
+
 export const THIS_WEEK_TICK = "this week";
 
 export function trendTick(weekStart: string, current: string): string {
@@ -117,16 +122,11 @@ export function decidedReducer(state: DecidedMap, action: DecidedAction): Decide
 }
 
 /**
- * Review rows reconciled with the board: an undecided row shows the board's live copy and drops once the board
- * no longer has it as carried (deleted, or moved and the undo window closed). A decided row renders from its
- * snapshot, at its old position, even after the refetched review no longer lists it.
+ * Review rows reconciled with the board: an undecided row shows the board's live copy, in whatever column it is
+ * now, and drops once the board no longer has the task (deleted). A decided row renders from its snapshot, at its
+ * old position, even after the refetched review no longer lists it.
  */
-export function carriedRows(
-  carried: CarriedEntry[],
-  decided: DecidedMap,
-  live: Map<string, TaskDto> | null,
-  weekStart: string,
-): CarriedRow[] {
+export function carriedRows(carried: CarriedEntry[], decided: DecidedMap, live: Map<string, TaskDto> | null): CarriedRow[] {
   const rows: CarriedRow[] = [];
   for (const entry of carried) {
     const d = decided[entry.task.id];
@@ -139,7 +139,7 @@ export function carriedRows(
       continue;
     }
     const task = live.get(entry.task.id);
-    if (task && task.rolledBackAt === weekStart) rows.push({ entry: { ...entry, task }, decided: null });
+    if (task) rows.push({ entry: { ...entry, task }, decided: null });
   }
   const listed = new Set(carried.map((c) => c.task.id));
   const vanished = Object.entries(decided)

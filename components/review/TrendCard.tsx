@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { InsightsDto } from "@/lib/insights";
-import { completionLine, trendLabel } from "./review";
+import { completionLine, droppedLine, trendLabel } from "./review";
 import { CARD, MUTED, TITLE } from "./styles";
 
 const TrendChart = dynamic(() => import("./TrendChart").then((m) => m.TrendChart), {
@@ -21,6 +21,7 @@ function Key({ color, label }: { color: string; label: string }) {
 
 export function TrendCard({ trend, current }: { trend: InsightsDto["trend"]; current: string }) {
   const completion = completionLine(trend);
+  const dropped = droppedLine(trend);
   const now = trend[trend.length - 1];
   return (
     <section aria-labelledby="review-trend" className={CARD}>
@@ -39,8 +40,9 @@ export function TrendCard({ trend, current }: { trend: InsightsDto["trend"]; cur
       <p className={`${MUTED} tabular-nums`}>
         {now && `this week ${now.finished} finished of ${now.planned} planned`}
         {completion && ` · ${completion}`}
+        {dropped && ` · ${dropped}`}
       </p>
-      <p className={MUTED}>planned counts every task put on a week; finished leaves out ones reopened that week</p>
+      <p className={MUTED}>planned counts every task put on a week; finished leaves out ones reopened that week; deleted tasks count only as dropped</p>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import type { EventType } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { buildInsights, median, type InsightEvent } from "./insights";
+import { buildInsights, carriedTaskIds, median, type InsightEvent } from "./insights";
 import type { TaskDto } from "./tasks";
 
 const NOW = new Date("2026-11-05T04:00:00Z");
@@ -41,7 +41,7 @@ describe("origin", () => {
       ev(id, "CREATED", "2026-10-27T02:00:00Z"),
       ev(id, "PLANNED", "2026-10-27T02:00:00Z"),
       ev(id, "ROLLED_BACK", "2026-11-01T16:00:00Z", WEEK),
-      ev(id, "PLANNED", "2026-11-02T02:00:00Z"),
+      ev(id, "PLANNED", "2026-11-03T02:00:00Z"),
       ev(id, "DONE", "2026-11-03T03:00:00Z"),
     ]);
     const insights = build(tasks, events);
@@ -52,10 +52,17 @@ describe("origin", () => {
       finishedNew: 0,
       addedAfterMonday: 0,
     });
+    expect(insights.signals.midWeekRatio).toBe(0);
     expect(insights.pattern).toBe("steady week: finished 2 of 2");
   });
 
-  it("counts tasks created this week and the ones planned after Monday", () => {
+  it("does not count a carried task that was deleted", () => {
+    const events = [ev("gone", "ROLLED_BACK", "2026-11-01T16:00:00Z", WEEK), ev("gone", "DELETED", "2026-11-03T03:00:00Z")];
+    expect(carriedTaskIds(events, WEEK)).toEqual([]);
+    expect(carriedTaskIds([...events, ev("gone", "RESTORED", "2026-11-03T04:00:00Z")], WEEK)).toEqual(["gone"]);
+  });
+
+  it("counts new work arriving after Monday, not old work planned late", () => {
     const tasks = [
       task("wed", { status: "DONE", createdAt: "2026-11-04T02:00:00.000Z" }),
       task("mon", { status: "IN_PROGRESS", createdAt: "2026-11-02T01:00:00.000Z" }),
@@ -76,7 +83,7 @@ describe("origin", () => {
       addedThisWeek: 2,
       finishedCarried: 0,
       finishedNew: 1,
-      addedAfterMonday: 2,
+      addedAfterMonday: 1,
     });
   });
 
@@ -121,7 +128,7 @@ describe("signals", () => {
     task("late", { status: "DONE", dueDate: "2026-11-01" }),
     task("early", { status: "DONE", dueDate: "2026-11-10" }),
     task("p3"),
-    task("p4"),
+    task("p4", { createdAt: "2026-11-02T01:00:00.000Z" }),
     task("stuck", { status: "BACKLOG", weekOf: null, rolloverCount: 2, createdAt: "2026-10-06T04:00:00.000Z" }),
     task("gone", { archived: true, weekOf: LAST, rolloverCount: 3 }),
   ];
@@ -191,8 +198,34 @@ describe("trend", () => {
       ev("undone", "REOPENED", "2026-11-03T04:00:00Z"),
     ];
     const trend = build(tasks, events).trend;
-    expect(trend[6]).toEqual({ weekStart: LAST, planned: 2, finished: 2 });
-    expect(trend[7]).toEqual({ weekStart: WEEK, planned: 2, finished: 1 });
+    expect(trend[6]).toEqual({ weekStart: LAST, planned: 2, finished: 2, dropped: 0 });
+    expect(trend[7]).toEqual({ weekStart: WEEK, planned: 2, finished: 1, dropped: 0 });
+  });
+
+  it("moves deleted tasks out of planned, finished and flow into dropped", () => {
+    const tasks = [task("kept", { status: "DONE" })];
+    const events = [
+      ev("kept", "CREATED", "2026-11-02T01:00:00Z"),
+      ev("kept", "PLANNED", "2026-11-02T01:00:00Z"),
+      ev("kept", "DONE", "2026-11-03T01:00:00Z"),
+      ev("old", "PLANNED", "2026-10-27T01:00:00Z"),
+      ev("old", "DONE", "2026-10-28T01:00:00Z"),
+      ev("old", "DELETED", "2026-11-02T05:00:00Z"),
+      ev("gone", "CREATED", "2026-10-01T01:00:00Z"),
+      ev("gone", "PLANNED", "2026-11-02T01:00:00Z"),
+      ev("gone", "DONE", "2026-11-02T03:00:00Z"),
+      ev("gone", "DELETED", "2026-11-03T05:00:00Z"),
+    ];
+    const insights = build(tasks, events);
+    expect(insights.trend[6]).toEqual({ weekStart: LAST, planned: 0, finished: 0, dropped: 1 });
+    expect(insights.trend[7]).toEqual({ weekStart: WEEK, planned: 1, finished: 1, dropped: 1 });
+    expect(insights.flow.medianCreatedToDoneDays).toBe(1);
+  });
+
+  it("matches the headline for the current week", () => {
+    const tasks = [task("a", { status: "DONE" }), task("b")];
+    const events = [ev("x", "PLANNED", "2026-11-02T03:00:00Z"), ev("x", "UNPLANNED", "2026-11-02T04:00:00Z")];
+    expect(build(tasks, events).trend[7]).toEqual({ weekStart: WEEK, planned: 2, finished: 1, dropped: 0 });
   });
 });
 
@@ -231,7 +264,7 @@ describe("pattern", () => {
   });
 
   it("3: half the week added after Monday, with at least four planned", () => {
-    const four = ["m1", "m2", "m3", "m4"].map((id) => task(id));
+    const four = ["m1", "m2", "m3", "m4"].map((id) => task(id, { createdAt: "2026-11-02T01:00:00.000Z" }));
     const late = [ev("m1", "PLANNED", "2026-11-03T03:00:00Z"), ev("m2", "PLANNED", "2026-11-04T03:00:00Z")];
     expect(build(four, late).pattern).toBe("half of this week's tasks were added after Monday");
     expect(build(four.slice(0, 3), late).pattern).toBe("steady week: finished 0 of 3");

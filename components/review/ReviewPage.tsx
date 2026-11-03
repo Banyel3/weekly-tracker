@@ -59,7 +59,7 @@ export function ReviewPage() {
             <SignalsCard signals={review.data.insights.signals} />
           </div>
           <TrendCard trend={review.data.insights.trend} current={review.data.week.start} />
-          <CarriedSection carried={review.data.carried} weekStart={review.data.week.start} />
+          <CarriedSection carried={review.data.carried} />
           <LastWeekSection lastWeek={review.data.lastWeek} />
           <SummaryPreview review={review.data} />
         </>
