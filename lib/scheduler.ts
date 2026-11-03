@@ -1,7 +1,8 @@
 import cron from "node-cron";
 import { catchUpMissedJobs } from "./catchUp";
+import { sendMorningDigest } from "./digest";
 import { rolloverStaleTasks } from "./rollover";
-import { sendDueTodayReminder, telegramConfigured } from "./reminders";
+import { telegramConfigured } from "./reminders";
 import { sendWeeklySummary } from "./summary";
 import { TIMEZONE } from "./week";
 
@@ -30,7 +31,7 @@ export async function startScheduler(): Promise<void> {
 
   schedule("0 0 * * 1", () => rolloverStaleTasks());
   schedule("0 * * * *", () => rolloverStaleTasks());
-  schedule("0 9 * * *", () => sendDueTodayReminder());
+  schedule("0 9 * * *", () => sendMorningDigest());
   schedule("0 18 * * 5", () => sendWeeklySummary());
   console.log("[scheduler] crons: rollover(weekly,hourly) reminder summary");
   console.log(`[scheduler] telegram ${telegramConfigured() ? "enabled" : "disabled"}`);

@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { getState } from "./appState";
-import { REMINDER_SENT_KEY, sendDueTodayReminder, telegramConfigured } from "./reminders";
+import { sendMorningDigest } from "./digest";
+import { REMINDER_SENT_KEY, telegramConfigured } from "./reminders";
 import { SUMMARY_SENT_KEY, sendWeeklySummary } from "./summary";
 import { TIMEZONE, todayYmd } from "./week";
 
@@ -26,6 +27,6 @@ export async function catchUpMissedJobs(now: Date = new Date()): Promise<void> {
     summary: await getState(SUMMARY_SENT_KEY),
   });
   console.log(`[scheduler] catch-up reminder=${due.reminder} summary=${due.summary}`);
-  if (due.reminder) await sendDueTodayReminder(now);
+  if (due.reminder) await sendMorningDigest(now);
   if (due.summary) await sendWeeklySummary(now);
 }

@@ -1,8 +1,3 @@
-import { Status } from "@prisma/client";
-import { setState } from "./appState";
-import { prisma } from "./db";
-import { todayYmd, ymdToDate } from "./week";
-
 export const REMINDER_SENT_KEY = "lastSentOn:reminder";
 
 /** Startup awaits the catch-up send, so a stalled connection must not hold readiness past the healthcheck. */
@@ -38,20 +33,4 @@ export async function sendTelegram(text: string, tag: string): Promise<boolean> 
     console.error(`[${tag}] telegram request failed:`, err);
     return false;
   }
-}
-
-export async function sendDueTodayReminder(now: Date = new Date()): Promise<void> {
-  if (!telegramConfigured()) return;
-
-  const today = todayYmd(now);
-  const tasks = await prisma.task.findMany({
-    where: { archived: false, status: { not: Status.DONE }, dueDate: ymdToDate(today) },
-    orderBy: { createdAt: "asc" },
-    select: { title: true },
-  });
-  if (tasks.length > 0) {
-    const text = [`Due today (${today}):`, ...tasks.map((t) => `• ${t.title}`)].join("\n");
-    if (!(await sendTelegram(text, "reminders"))) return;
-  }
-  await setState(REMINDER_SENT_KEY, today);
 }
