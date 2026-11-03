@@ -65,17 +65,32 @@ export function buildMorningDigest(data: DigestData): string {
   return text.length <= TELEGRAM_MAX_CHARS ? text : text.slice(0, TELEGRAM_MAX_CHARS - 1) + "…";
 }
 
-function render(data: DigestData, cap: number): string {
+export type DigestSections = {
+  overdue: DigestTask[];
+  dueToday: DigestTask[];
+  dueTomorrow: DigestTask[];
+  later: DigestTask[];
+};
+
+const due = (t: DigestTask) => t.dueDate as string;
+
+/** The digest's dated sections, each sorted by due date, priority, then age; shared with the agent API's get_today. */
+export function digestSections(data: Pick<DigestData, "today" | "week" | "tasks">): DigestSections {
   const { today, week } = data;
   const tomorrow = shiftYmd(today, 1);
   const laterFrom = shiftYmd(today, 2);
   const dated = data.tasks.filter((t) => t.dueDate !== null).sort(byDueThenPriority);
-  const due = (t: DigestTask) => t.dueDate as string;
+  return {
+    overdue: dated.filter((t) => due(t) < today),
+    dueToday: dated.filter((t) => due(t) === today),
+    dueTomorrow: dated.filter((t) => due(t) === tomorrow),
+    later: dated.filter((t) => due(t) >= laterFrom && due(t) <= week.end),
+  };
+}
 
-  const overdue = dated.filter((t) => due(t) < today);
-  const dueToday = dated.filter((t) => due(t) === today);
-  const dueTomorrow = dated.filter((t) => due(t) === tomorrow);
-  const later = dated.filter((t) => due(t) >= laterFrom && due(t) <= week.end);
+function render(data: DigestData, cap: number): string {
+  const { today } = data;
+  const { overdue, dueToday, dueTomorrow, later } = digestSections(data);
 
   const dayIndex = formatInTimeZone(ymdToDate(today), "UTC", "i");
   const header = `Good morning · ${formatInTimeZone(ymdToDate(today), "UTC", "EEE MMM d")} · day ${dayIndex} of 7`;
