@@ -1,6 +1,7 @@
 import { Status } from "@prisma/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./db";
+import { getInsights, type InsightsDto } from "./insights";
 import { listProjects, type ProjectDto } from "./projects";
 import { toDto, type TaskDto } from "./tasks";
 import { TIMEZONE, shiftYmd, todayYmd, weekRange, ymdToDate, type WeekRange } from "./week";
@@ -13,7 +14,7 @@ export type ProjectTally = {
   finished: number;
 };
 
-export type ReviewDto = {
+export type ReviewBase = {
   week: WeekRange;
   today: string;
   thisWeek: {
@@ -27,6 +28,8 @@ export type ReviewDto = {
   lastWeek: WeekRange & { planned: number; finished: number; carried: number; byProject: ProjectTally[] };
   perDay: { day: string; finished: number }[];
 };
+
+export type ReviewDto = ReviewBase & { insights: InsightsDto };
 
 export type ReviewData = { tasks: TaskDto[]; projects: ProjectDto[] };
 
@@ -58,7 +61,7 @@ function completedDay(task: TaskDto): string | null {
   return task.completedAt ? formatInTimeZone(new Date(task.completedAt), TIMEZONE, "yyyy-MM-dd") : null;
 }
 
-export function buildReview(now: Date, { tasks, projects }: ReviewData): ReviewDto {
+export function buildReview(now: Date, { tasks, projects }: ReviewData): ReviewBase {
   const week = weekRange(now);
   const today = todayYmd(now);
   const lastStart = shiftYmd(week.start, -7);
@@ -104,7 +107,7 @@ export async function getReview(now: Date = new Date()): Promise<ReviewDto> {
   const week = weekRange(now);
   const thisMonday = ymdToDate(week.start);
   const since = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
-  const [tasks, projects] = await Promise.all([
+  const [tasks, projects, insights] = await Promise.all([
     prisma.task.findMany({
       where: {
         OR: [
@@ -117,6 +120,7 @@ export async function getReview(now: Date = new Date()): Promise<ReviewDto> {
       orderBy: { createdAt: "asc" },
     }),
     listProjects(),
+    getInsights(now),
   ]);
-  return buildReview(now, { tasks: tasks.map(toDto), projects });
+  return { ...buildReview(now, { tasks: tasks.map(toDto), projects }), insights };
 }

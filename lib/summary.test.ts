@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildInsights } from "./insights";
 import type { ReviewDto } from "./review";
 import { buildWeeklySummaryText } from "./summary";
 import type { TaskDto } from "./tasks";
@@ -45,8 +46,14 @@ function review(carried: ReviewDto["carried"]): ReviewDto {
     carried,
     lastWeek: { start: "2026-10-19", end: "2026-10-25", planned: 0, finished: 0, carried: 0, byProject: [] },
     perDay: [],
+    insights: {
+      ...buildInsights(new Date("2026-10-30T04:00:00Z"), { tasks: [], events: [] }),
+      origin: { carriedIn: 3, addedThisWeek: 2, finishedCarried: 1, finishedNew: 2, addedAfterMonday: 1 },
+    },
   };
 }
+
+const ORIGIN = "carried in 3, finished 1 · added 2, finished 2";
 
 describe("buildWeeklySummaryText", () => {
   it("lists tasks carried over twice or more that are still in Backlog", () => {
@@ -61,6 +68,7 @@ describe("buildWeeklySummaryText", () => {
     expect(text).toBe(
       [
         "Week of Oct 26: finished 4 of 7 · 2 in progress · 1 overdue",
+        ORIGIN,
         "Work 3/5 · No project 1/2",
         "Carried over twice or more: Taxes, Gym plan",
       ].join("\n"),
@@ -69,13 +77,18 @@ describe("buildWeeklySummaryText", () => {
 
   it("omits the carried line when nothing qualifies", () => {
     expect(buildWeeklySummaryText(review([carry("Once only", 1)]))).toBe(
-      ["Week of Oct 26: finished 4 of 7 · 2 in progress · 1 overdue", "Work 3/5 · No project 1/2"].join("\n"),
+      ["Week of Oct 26: finished 4 of 7 · 2 in progress · 1 overdue", ORIGIN, "Work 3/5 · No project 1/2"].join("\n"),
     );
   });
 
   it("omits the project line when the week is empty", () => {
     const empty = review([]);
     empty.thisWeek = { planned: 0, finished: 0, inProgress: 0, overdue: 0, byProject: [] };
-    expect(buildWeeklySummaryText(empty)).toBe("Week of Oct 26: finished 0 of 0 · 0 in progress · 0 overdue");
+    empty.insights.origin = { carriedIn: 0, addedThisWeek: 0, finishedCarried: 0, finishedNew: 0, addedAfterMonday: 0 };
+    expect(buildWeeklySummaryText(empty)).toBe(
+      ["Week of Oct 26: finished 0 of 0 · 0 in progress · 0 overdue", "carried in 0, finished 0 · added 0, finished 0"].join(
+        "\n",
+      ),
+    );
   });
 });

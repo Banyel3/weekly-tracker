@@ -5,9 +5,11 @@ import { ymdToDate } from "./week";
 /** Pure and Prisma-free so the review page can render the same text it previews. */
 export function buildWeeklySummaryText(review: ReviewDto): string {
   const { thisWeek } = review;
+  const origin = review.insights.origin;
   const weekOf = formatInTimeZone(ymdToDate(review.week.start), "UTC", "MMM d");
   const lines = [
     `Week of ${weekOf}: finished ${thisWeek.finished} of ${thisWeek.planned} · ${thisWeek.inProgress} in progress · ${thisWeek.overdue} overdue`,
+    `carried in ${origin.carriedIn}, finished ${origin.finishedCarried} · added ${origin.addedThisWeek}, finished ${origin.finishedNew}`,
   ];
   if (thisWeek.byProject.length > 0) {
     lines.push(thisWeek.byProject.map((p) => `${p.name} ${p.finished}/${p.planned}`).join(" · "));

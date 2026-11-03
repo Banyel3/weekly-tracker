@@ -52,3 +52,30 @@ model AppState {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+enum EventType {
+  CREATED
+  PLANNED
+  UNPLANNED
+  STARTED
+  DONE
+  REOPENED
+  RESCHEDULED
+  ROLLED_BACK
+  ARCHIVED
+  DELETED
+  RESTORED
+}
+
+model TaskEvent {
+  id     String    @id @default(cuid())
+  taskId String
+  type   EventType
+  at     DateTime  @default(now())
+  weekOf DateTime? @db.Date
+  from   String?
+  to     String?
+
+  @@index([taskId])
+  @@index([at])
+}

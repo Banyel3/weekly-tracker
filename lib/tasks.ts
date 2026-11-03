@@ -1,7 +1,8 @@
-import { Priority, Status, type Prisma, type Task } from "@prisma/client";
+import { EventType, Priority, Status, type Prisma, type Task } from "@prisma/client";
 import { z } from "zod";
 import { checklistSchema, normalizeChecklist, readChecklist, type ChecklistItem } from "./checklist";
 import { prisma } from "./db";
+import { createEvents, recordEvents, updateEvents, type EventChange } from "./events";
 import { listProjects, type ProjectDto } from "./projects";
 import { currentWeekStart, dateToYmd, todayYmd, weekRange, ymdToDate, type WeekRange } from "./week";
 
@@ -134,20 +135,29 @@ function completedAtFor(status: Status, previous: Task | null, now: Date): Date 
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
-  const task = await prisma.task.create({
-    data: {
-      title: input.title,
-      note: input.note ?? null,
-      dueDate: optionalDate(input.dueDate) ?? null,
-      status: input.status,
-      weekOf: weekOfFor(input.status),
-      projectId: input.projectId ?? null,
-      priority: input.priority,
-      checklist: normalizeChecklist(input.checklist),
-      completedAt: completedAtFor(input.status, null, new Date()),
-    },
+  const now = new Date();
+  const task = await prisma.$transaction(async (tx) => {
+    const created = await tx.task.create({
+      data: {
+        title: input.title,
+        note: input.note ?? null,
+        dueDate: optionalDate(input.dueDate) ?? null,
+        status: input.status,
+        weekOf: weekOfFor(input.status, now),
+        projectId: input.projectId ?? null,
+        priority: input.priority,
+        checklist: normalizeChecklist(input.checklist),
+        completedAt: completedAtFor(input.status, null, now),
+      },
+    });
+    await recordEvents(tx, withTask(created.id, createEvents(input.status)), now);
+    return created;
   });
   return toDto(task);
+}
+
+function withTask(taskId: string, changes: EventChange[]) {
+  return changes.map((change) => ({ taskId, ...change }));
 }
 
 /** Order matters: an explicit rolledBackAt (move undo) overrides the status reset; a restore overrides both. */
@@ -180,12 +190,21 @@ export function updateData(input: UpdateTaskInput, existing: Task, now: Date): P
 export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
   const existing = await prisma.task.findUnique({ where: { id } });
   if (!existing) return null;
-  const task = await prisma.task.update({ where: { id }, data: updateData(input, existing, new Date()) });
+  const now = new Date();
+  const task = await prisma.$transaction(async (tx) => {
+    const updated = await tx.task.update({ where: { id }, data: updateData(input, existing, now) });
+    await recordEvents(tx, withTask(id, updateEvents(input, existing)), now);
+    return updated;
+  });
   return toDto(task);
 }
 
 export async function deleteTask(id: string): Promise<TaskDto | null> {
   const existing = await prisma.task.findUnique({ where: { id } });
   if (!existing) return null;
-  return toDto(await prisma.task.delete({ where: { id } }));
+  const deleted = await prisma.$transaction(async (tx) => {
+    await recordEvents(tx, [{ taskId: id, type: EventType.DELETED }]);
+    return tx.task.delete({ where: { id } });
+  });
+  return toDto(deleted);
 }
