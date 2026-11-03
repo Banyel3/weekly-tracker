@@ -58,10 +58,10 @@ export function ColumnGuide({ ref, index, columns, panelId, tabId, follow, onGo 
             key={index}
             initial={{ opacity: 0, x: direction * SHIFT_PX }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0 } }}
             className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-5"
           >
-            <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+            <span className="flex min-w-0 items-center gap-1 justify-self-start text-muted-foreground">
               {left && (
                 <>
                   <Icon icon={ChevronLeft} size="sm" />
@@ -69,7 +69,7 @@ export function ColumnGuide({ ref, index, columns, panelId, tabId, follow, onGo 
                 </>
               )}
             </span>
-            <span className="inline-flex items-center gap-2.5 text-sm font-medium">
+            <span className="inline-flex items-center gap-2.5 text-sm font-medium whitespace-nowrap">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-1.5 rounded-full" style={{ background: statusVar(status) }} />
                 {current}
@@ -78,7 +78,7 @@ export function ColumnGuide({ ref, index, columns, panelId, tabId, follow, onGo 
                 {overLimit ? `${total} / ${WIP_LIMIT}` : shown}
               </span>
             </span>
-            <span className="flex min-w-0 items-center justify-end gap-1 text-muted-foreground">
+            <span className="flex min-w-0 items-center justify-end gap-1 justify-self-end text-muted-foreground">
               {right && (
                 <>
                   <span className="truncate">{right}</span>
