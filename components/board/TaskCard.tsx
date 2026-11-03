@@ -14,6 +14,7 @@ import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { todayYmd, ymdToDate, type WeekRange } from "@/lib/week";
 import { colorVar } from "../ColorSwatches";
+import { isSaving } from "../savingTask";
 import type { CardData } from "./dnd";
 import { PriorityFlag } from "./PriorityFlag";
 
@@ -116,7 +117,7 @@ export const hasPriority = (tasks: TaskDto[]) => tasks.some((t) => t.priority !=
 export const titleSelector = (id: string) => `[data-card-title="${CSS.escape(id)}"]`;
 
 export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, onMove, flagSlot = true }: Props) {
-  const pending = task.id.startsWith("tmp-");
+  const pending = isSaving(task);
   const data: CardData = { status: task.status, title: task.title };
   const { setNodeRef, setActivatorNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: task.id,

@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { TaskDto } from "@/lib/tasks";
 import type { Status } from "./board/dnd";
+import { isSaving } from "./savingTask";
 import type { DialogTarget } from "./board/TaskDialog";
 
 export type TaskDialogState = {
@@ -18,7 +19,9 @@ export function useTaskDialogState(): TaskDialogState {
   const [target, setTarget] = useState<DialogTarget | null>(null);
   const actions = useMemo(
     () => ({
-      openTask: (task: TaskDto) => setTarget({ mode: "edit", task }),
+      openTask: (task: TaskDto) => {
+        if (!isSaving(task)) setTarget({ mode: "edit", task });
+      },
       openCreate: (initialStatus: Status) => setTarget({ mode: "create", initialStatus }),
       close: () => setTarget(null),
     }),

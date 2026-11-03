@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
-import { localId } from "@/lib/localId";
 import type { BoardCounts, BoardDto, TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
 import { COLUMNS } from "./board/dnd";
+import { isSaving, tempTaskId } from "./savingTask";
 import { deletedLabel, movedLabel, rescheduledLabel, type UndoSlot } from "./useUndo";
 
 type Status = TaskDto["status"];
@@ -124,6 +124,7 @@ export function useBoard(register: UndoSlot["register"]) {
 
   const moveTask = useCallback(
     async (task: TaskDto, to: Status): Promise<boolean> => {
+      if (isSaving(task)) return false;
       clearSaveError();
       replace(task.id, { ...task, status: to, rolledBackAt: null });
       const res = await patchTask(task.id, { status: to });
@@ -146,7 +147,7 @@ export function useBoard(register: UndoSlot["register"]) {
     const now = new Date().toISOString();
     const temp: TaskDto = {
       ...body,
-      id: `tmp-${localId()}`,
+      id: tempTaskId(),
       weekOf: null,
       rolledBackAt: null,
       rolloverCount: 0,
@@ -189,6 +190,7 @@ export function useBoard(register: UndoSlot["register"]) {
 
   const updateTask = useCallback(
     async (id: string, patch: TaskPatch): Promise<string | null> => {
+      if (isSaving({ id })) return null;
       const res = await patchTask(id, patch);
       if (!res?.ok) return errorText(res);
       replace(id, await res.json());
@@ -200,6 +202,7 @@ export function useBoard(register: UndoSlot["register"]) {
 
   const rescheduleTask = useCallback(
     async function reschedule(task: TaskDto, dueDate: string, undoable = true): Promise<void> {
+      if (isSaving(task)) return;
       clearSaveError();
       replace(task.id, { ...task, dueDate });
       const res = await patchTask(task.id, { dueDate });
@@ -221,6 +224,7 @@ export function useBoard(register: UndoSlot["register"]) {
 
   const removeTask = useCallback(
     (task: TaskDto) => {
+      if (isSaving(task)) return;
       const index = latest.current.tasks.findIndex((t) => t.id === task.id);
       if (index < 0) return;
       const restore = () => {

@@ -5,6 +5,7 @@ import { useDraggable } from "@dnd-kit/core";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
+import { isSaving } from "../savingTask";
 import { TASK_PREFIX, chipStyle, isOverdue } from "./calendar";
 import { moveChipFocus, type ChipData } from "./dnd";
 
@@ -44,7 +45,7 @@ export function EventChip({ task, project, today, onOpen }: Props) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: `${TASK_PREFIX}${task.id}`,
     data,
-    disabled: task.id.startsWith("tmp-"),
+    disabled: isSaving(task),
   });
   const { className, style } = tone(task, project, today);
 
