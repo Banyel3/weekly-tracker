@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import type { InsightsDto } from "../../lib/insights";
 import type { ReviewDto } from "../../lib/review";
 import type { TaskDto } from "../../lib/tasks";
 import { ymdToDate, type WeekRange } from "../../lib/week";
@@ -22,6 +23,39 @@ const mmmd = (ymd: string) => formatInTimeZone(ymdToDate(ymd), "UTC", "MMM d");
 
 export function headline(w: ReviewDto["thisWeek"]): { main: string; overdue: string } {
   return { main: `Finished ${w.finished} of ${w.planned} planned · ${w.inProgress} in progress`, overdue: `${w.overdue} overdue` };
+}
+
+export function originLine(o: InsightsDto["origin"]): string {
+  return `carried in ${o.carriedIn} (${o.finishedCarried} finished) · added ${o.addedThisWeek} (${o.finishedNew} finished)`;
+}
+
+export const EMPTY = "—";
+
+export function daysText(days: number | null): string {
+  if (days === null) return EMPTY;
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
+export function shareText(share: number | null): string {
+  return share === null ? EMPTY : `${Math.round(share * 100)}%`;
+}
+
+export function completionLine(trend: InsightsDto["trend"]): string | null {
+  const planned = trend.reduce((sum, w) => sum + w.planned, 0);
+  const finished = trend.reduce((sum, w) => sum + w.finished, 0);
+  if (planned === 0) return null;
+  return `completion ${Math.round((finished / planned) * 100)}% over ${trend.length} weeks`;
+}
+
+export const THIS_WEEK_TICK = "this week";
+
+export function trendTick(weekStart: string, current: string): string {
+  return weekStart === current ? THIS_WEEK_TICK : mmmd(weekStart);
+}
+
+export function trendLabel(trend: InsightsDto["trend"]): string {
+  const weeks = trend.map((w) => `${mmmd(w.weekStart)}: planned ${w.planned}, finished ${w.finished}`);
+  return `Planned and finished per week. ${weeks.join("; ")}`;
 }
 
 export function dayLine(today: string): string {

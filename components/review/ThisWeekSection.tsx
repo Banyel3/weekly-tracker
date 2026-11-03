@@ -1,14 +1,15 @@
+import type { InsightsDto } from "@/lib/insights";
 import type { ReviewDto } from "@/lib/review";
 import { cn } from "@/lib/utils";
 import { colorVar } from "../ColorSwatches";
 import { percent } from "../stats/stats";
 import { ProjectDot } from "./ProjectDot";
-import { dayLine, headline } from "./review";
+import { dayLine, headline, originLine } from "./review";
 import { CARD, MUTED, TITLE } from "./styles";
 
-type Props = { thisWeek: ReviewDto["thisWeek"]; today: string };
+type Props = { thisWeek: ReviewDto["thisWeek"]; today: string; insights: InsightsDto };
 
-export function ThisWeekSection({ thisWeek, today }: Props) {
+export function ThisWeekSection({ thisWeek, today, insights }: Props) {
   const { main, overdue } = headline(thisWeek);
   return (
     <section aria-labelledby="review-this-week" className={CARD}>
@@ -26,6 +27,10 @@ export function ThisWeekSection({ thisWeek, today }: Props) {
             {main} ·{" "}
             <span className={cn(thisWeek.overdue > 0 && "text-[color:var(--alert)]")}>{overdue}</span>
           </p>
+          <div className="-mt-2 flex flex-col gap-0.5">
+            <p className="m-0 text-sm tabular-nums">{originLine(insights.origin)}</p>
+            {insights.pattern && <p className="m-0 text-sm text-muted-foreground">{insights.pattern}</p>}
+          </div>
           <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0 max-[899px]:grid-cols-2 max-[599px]:grid-cols-1">
             {thisWeek.byProject.map((p) => (
               <li key={p.projectId ?? "none"} className="flex flex-col gap-2 rounded-lg border bg-muted/40 px-3 py-2.5">

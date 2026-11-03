@@ -3,6 +3,11 @@ import type { ReviewDto } from "../../lib/review";
 import type { TaskDto } from "../../lib/tasks";
 import {
   carriedRows,
+  completionLine,
+  daysText,
+  originLine,
+  shareText,
+  trendTick,
   decidedReducer,
   decidedText,
   dayLine,
@@ -175,5 +180,32 @@ describe("carriedRows", () => {
       ["b", "deleted"],
       ["c", null],
     ]);
+  });
+});
+
+describe("insight text", () => {
+  it("states where this week's work came from", () => {
+    expect(
+      originLine({ carriedIn: 2, finishedCarried: 2, addedThisWeek: 0, finishedNew: 0, addedAfterMonday: 0 }),
+    ).toBe("carried in 2 (2 finished) · added 0 (0 finished)");
+  });
+
+  it("shows a dash for missing values", () => {
+    expect(daysText(null)).toBe("—");
+    expect(daysText(1)).toBe("1 day");
+    expect(daysText(2.5)).toBe("2.5 days");
+    expect(shareText(null)).toBe("—");
+    expect(shareText(0.25)).toBe("25%");
+  });
+
+  it("sums the 8-week completion and omits it when nothing was planned", () => {
+    const week = (planned: number, finished: number) => ({ weekStart: MONDAY, planned, finished });
+    expect(completionLine([week(5, 3), week(3, 2)])).toBe("completion 63% over 2 weeks");
+    expect(completionLine([week(0, 0)])).toBeNull();
+  });
+
+  it("labels the current week and dates the rest", () => {
+    expect(trendTick(MONDAY, MONDAY)).toBe("this week");
+    expect(trendTick("2026-10-05", MONDAY)).toBe("Oct 5");
   });
 });

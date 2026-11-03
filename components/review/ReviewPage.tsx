@@ -4,10 +4,13 @@ import { useBoardContext } from "../BoardProvider";
 import { UndoLine } from "../board/UndoLine";
 import { useReviewContext } from "../useReview";
 import { CarriedSection } from "./CarriedSection";
+import { FlowCard } from "./FlowCard";
 import { LastWeekSection } from "./LastWeekSection";
+import { SignalsCard } from "./SignalsCard";
 import { LINK_BUTTON } from "./styles";
 import { SummaryPreview } from "./SummaryPreview";
 import { ThisWeekSection } from "./ThisWeekSection";
+import { TrendCard } from "./TrendCard";
 
 function Retry({ text, onRetry }: { text: string; onRetry: () => void }) {
   return (
@@ -46,7 +49,16 @@ export function ReviewPage() {
       )}
       {review.status === "ready" && (
         <>
-          <ThisWeekSection thisWeek={review.data.thisWeek} today={review.data.today} />
+          <ThisWeekSection
+            thisWeek={review.data.thisWeek}
+            today={review.data.today}
+            insights={review.data.insights}
+          />
+          <div className="grid grid-cols-2 gap-6 max-[699px]:grid-cols-1">
+            <FlowCard flow={review.data.insights.flow} />
+            <SignalsCard signals={review.data.insights.signals} />
+          </div>
+          <TrendCard trend={review.data.insights.trend} current={review.data.week.start} />
           <CarriedSection carried={review.data.carried} weekStart={review.data.week.start} />
           <LastWeekSection lastWeek={review.data.lastWeek} />
           <SummaryPreview review={review.data} />
