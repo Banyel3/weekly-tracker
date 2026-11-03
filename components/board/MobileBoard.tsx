@@ -153,7 +153,7 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
         ref={scroller}
         data-carousel
         className={cn(
-          "relative -mx-4 flex min-[600px]:-mx-6 h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] min-h-[40dvh] gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-6 scroll-px-6 [scrollbar-width:none] motion-reduce:scroll-auto",
+          "relative -mx-4 flex min-[600px]:-mx-6 h-[calc(100dvh-11rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[40dvh] gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-6 scroll-px-6 [scrollbar-width:none] motion-reduce:scroll-auto",
           dragging ? "snap-none" : "snap-x snap-mandatory scroll-smooth",
         )}
       >
