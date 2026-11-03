@@ -16,7 +16,9 @@ import {
   type DropAnimation,
 } from "@dnd-kit/core";
 import { LayoutGroup } from "motion/react";
+import { Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -189,12 +191,12 @@ export function Board() {
         </h2>
         <UndoLine returnFocusTo={SEARCH_ID} />
         <SearchField id={SEARCH_ID} value={q} onChange={setQ} className="ml-auto max-[599px]:w-full" />
-        <Link
-          href="/archive"
-          className="rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
-        >
-          in archive
-        </Link>
+        <Button asChild variant="outline" size="sm" className="text-muted-foreground hover:text-foreground pointer-coarse:h-11">
+          <Link href="/archive">
+            <Icon icon={Archive} />
+            Archive
+          </Link>
+        </Button>
       </div>
       <div aria-live="polite" className="text-sm text-muted-foreground empty:hidden">
         {board.error && (
