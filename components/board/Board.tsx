@@ -66,6 +66,11 @@ const DROP: DropAnimation = { duration: DURATION_MS, easing: EASE_OUT_CSS, sideE
 const isTouch = (event: Event) => typeof TouchEvent !== "undefined" && event instanceof TouchEvent;
 const isKeyboard = (event: Event) => typeof KeyboardEvent !== "undefined" && event instanceof KeyboardEvent;
 
+/** The card's title button, skipping a copy that is still animating out (popped by AnimatePresence). */
+function liveTitle(id: string): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>(titleSelector(id))].find((el) => !el.closest("[data-motion-pop-id]"));
+}
+
 type Drag = { id: string; pointer: boolean; armed: boolean };
 
 /** Pointer drags hand the card to the overlay; a successful pointer drop fades in at the destination for one beat. */
@@ -169,6 +174,7 @@ export function Board() {
         onAdd={openCreate}
         onMove={phone ? (task) => openMove(task, false) : undefined}
         settleOf={settleOf}
+        keyOf={board.keyOf}
         className={className}
       />
     );
@@ -249,7 +255,7 @@ export function Board() {
             refocus.current = null;
             if (!id) return;
             e.preventDefault();
-            requestAnimationFrame(() => document.querySelector<HTMLElement>(titleSelector(id))?.focus({ preventScroll: true }));
+            requestAnimationFrame(() => liveTitle(id)?.focus({ preventScroll: true }));
           }}
         />
       )}

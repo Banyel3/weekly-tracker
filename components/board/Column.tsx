@@ -25,10 +25,11 @@ type Props = {
   onAdd: (status: Status) => void;
   onMove?: (task: TaskDto) => void;
   settleOf?: (task: TaskDto) => "held" | "dropped" | undefined;
+  keyOf?: (task: TaskDto) => string;
   className?: string;
 };
 
-export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd, onMove, settleOf, className }: Props) {
+export function Column({ status, label, week, tasks, total, projectOf, loading, onOpen, onAdd, onMove, settleOf, keyOf, className }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const headingId = `column-${status}`;
   const overLimit = status === "IN_PROGRESS" && total > WIP_LIMIT;
@@ -83,7 +84,8 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
               <AnimatePresence mode="popLayout" initial={false}>
                 {tasks.map((task) => (
                   <TaskCard
-                    key={task.id}
+                    key={keyOf?.(task) ?? task.id}
+                    layoutKey={keyOf?.(task)}
                     task={task}
                     project={projectOf(task.projectId)}
                     week={week}

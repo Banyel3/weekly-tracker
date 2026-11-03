@@ -63,6 +63,8 @@ export function useBoard(register: UndoSlot["register"]) {
   const failed = useRef<(() => void) | null>(null);
   const hiddenTasks = useRef(new Set<string>());
   const hiddenProjects = useRef(new Set<string>());
+  // A created task keeps its optimistic id as its render key, so the tmp -> real id swap does not re-mount the card.
+  const aliases = useRef(new Map<string, string>());
   const latest = useRef({ projects, tasks });
   latest.current = { projects, tasks };
 
@@ -159,7 +161,9 @@ export function useBoard(register: UndoSlot["register"]) {
       body: JSON.stringify(body),
     });
     if (res?.ok) {
-      replace(temp.id, await res.json());
+      const saved: TaskDto = await res.json();
+      aliases.current.set(saved.id, temp.id);
+      replace(temp.id, saved);
       bump();
       return;
     }
@@ -322,6 +326,8 @@ export function useBoard(register: UndoSlot["register"]) {
     };
   }, [reload]);
 
+  const keyOf = useCallback((task: TaskDto) => aliases.current.get(task.id) ?? task.id, []);
+
   return {
     week,
     today,
@@ -341,6 +347,7 @@ export function useBoard(register: UndoSlot["register"]) {
     rescheduleTask,
     removeTask,
     retry,
+    keyOf,
   };
 }
 

@@ -49,10 +49,13 @@ export function MobileBoard({ columns, dragging, renderColumn }: Props) {
   }
 
   function go(i: number) {
+    const left = leftOf(i);
+    const root = scroller.current;
+    if (i === index && root && Math.abs(root.scrollLeft - left) < 1) return;
     if (flight.current) clearTimeout(flight.current.timer);
     flight.current = { to: i, timer: setTimeout(() => (flight.current = null), FLIGHT_MS) };
     setIndex(i);
-    scroller.current?.scrollTo({ left: leftOf(i) });
+    root?.scrollTo({ left });
   }
 
   useLayoutEffect(() => {

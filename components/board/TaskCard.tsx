@@ -87,13 +87,15 @@ type Props = MetaProps & {
    * "dropped" right after a pointer drop: the card fades in where it landed instead of travelling there.
    */
   settle?: "held" | "dropped";
+  /** Stable identity for shared-layout travel; defaults to the task id. */
+  layoutKey?: string;
   onOpen: (task: TaskDto) => void;
   onMove?: (task: TaskDto) => void;
 };
 
 export const titleSelector = (id: string) => `[data-card-title="${CSS.escape(id)}"]`;
 
-export function TaskCard({ ref, task, project, week, settle, onOpen, onMove }: Props) {
+export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, onMove }: Props) {
   const pending = task.id.startsWith("tmp-");
   const data: CardData = { status: task.status, title: task.title };
   const { setNodeRef, setActivatorNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -113,7 +115,7 @@ export function TaskCard({ ref, task, project, week, settle, onOpen, onMove }: P
         else if (ref) ref.current = el;
       }}
       layout={moves ? "position" : false}
-      layoutId={moves ? task.id : undefined}
+      layoutId={moves ? (layoutKey ?? task.id) : undefined}
       initial={settle === "dropped" ? { opacity: 0.4, y: 0 } : { opacity: 0, y: 4 }}
       animate={{ opacity, y: 0 }}
       exit={settle === "held" ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0 }}

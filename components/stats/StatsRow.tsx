@@ -1,5 +1,6 @@
 "use client";
 
+import { useBoardContext } from "../BoardProvider";
 import { AnimatedGroup } from "../motion/AnimatedGroup";
 import { useReviewContext } from "../useReview";
 import { MUTED, StatCard } from "./StatCard";
@@ -12,12 +13,14 @@ const GRID =
 
 export function StatsRow() {
   const review = useReviewContext();
+  const board = useBoardContext();
 
-  if (review.status !== "ready") {
+  // The WIP card reads the live board, so the row waits for both; its first paint then shows final numbers.
+  if (review.status !== "ready" || board.status !== "ready") {
     return (
       <div role="group" className={GRID} aria-label="This week's numbers">
         {[0, 1, 2].map((i) => (
-          <StatCard key={i} busy={review.status === "loading"}>
+          <StatCard key={i} busy={review.status === "loading" || board.status === "loading"}>
             {i === 0 && review.status === "error" && <p className={MUTED}>couldn&apos;t load the numbers</p>}
           </StatCard>
         ))}
