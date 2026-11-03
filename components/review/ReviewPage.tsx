@@ -55,7 +55,7 @@ export function ReviewPage() {
             insights={review.data.insights}
           />
           <div className="grid grid-cols-2 gap-4 max-[699px]:grid-cols-1">
-            <FlowCard flow={review.data.insights.flow} />
+            <FlowCard flow={review.data.insights.flow} overdueDays={review.data.insights.signals.avgOverdueDaysBeforeDone} />
             <SignalsCard signals={review.data.insights.signals} />
           </div>
           <TrendCard trend={review.data.insights.trend} current={review.data.week.start} />

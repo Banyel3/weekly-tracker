@@ -7,7 +7,6 @@ export function SignalsCard({ signals }: { signals: InsightsDto["signals"] }) {
   return (
     <InsightCard id="review-signals" title="Signals" note="observations, not grades">
       <InsightStat value={signals.reschedules} meaning={`due dates moved this week${perPlanned}`} />
-      <InsightStat value={daysText(signals.avgOverdueDaysBeforeDone)} meaning="average days past due when finished" />
       <InsightStat value={signals.rolledTwice} meaning="tasks carried over twice or more" />
       <InsightStat value={daysText(signals.oldestBacklogAgeDays)} meaning="age of the oldest Backlog task" />
       <InsightStat value={shareText(signals.midWeekRatio)} meaning="of this week's tasks planned after Monday" />
