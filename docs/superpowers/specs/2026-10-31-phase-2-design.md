@@ -149,6 +149,10 @@ Priority first (urgent, high, none), then the existing rules (rolled-back first 
 - Rollover: the non-Done `updateMany` also does `rolloverCount: { increment: 1 }`; the Done/archive call sets nothing new (`completedAt` already set when the task became Done).
 - New cron `0 18 * * 5` Asia/Manila → `sendWeeklySummary()`, registered under the same Telegram guard as the reminder.
 
+## Honest insights (added 2026-11-03)
+
+The review must distinguish where work came from. Tasks carry an append-only event log (created, planned, unplanned, started, done, reopened, rescheduled, rolled back, archived, deleted, restored) written by the existing mutation paths and backfilled from current fields. From it the review reports planned-by-origin (carried in vs added this week, and finished by origin), flow times (median added→done, median in progress, reopened), procrastination signals (reschedules, overdue days before done, rolled twice, oldest Backlog age, mid-week additions), an eight-week planned-vs-finished trend, and one neutral pattern sentence per week. Tone is observational only: no scores, streaks or red/green judgement. Details: `docs/plans/2026-11-01-phase-2.md` Task 7c.
+
 ## Deployment: laptop server on the tailnet
 
 The app will move from this machine to a laptop that stays on and is reached over Tailscale. Phase 2 prepares for that without changing the one-command promise.
