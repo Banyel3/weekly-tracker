@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import type { TaskDto } from "@/lib/tasks";
@@ -33,6 +33,7 @@ export function ArchiveList() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<TaskDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const target = useMemo(() => open && { mode: "view" as const, task: open }, [open]);
   const projectOf = (id: string | null) => board.projects.find((p) => p.id === id) ?? null;
 
   const hide = (id: string, on: boolean) =>
@@ -150,7 +151,19 @@ export function ArchiveList() {
             </ul>
           </section>
         ))}
-      {archive.status === "ready" && archive.nextBefore && (
+      {archive.status === "ready" && archive.moreFailed && (
+        <p role="alert" className="m-0 text-sm text-muted-foreground">
+          couldn&apos;t load more ·{" "}
+          <button
+            type="button"
+            onClick={archive.older}
+            className="rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+          >
+            retry
+          </button>
+        </p>
+      )}
+      {archive.status === "ready" && archive.nextBefore && !archive.moreFailed && (
         <button
           type="button"
           onClick={archive.older}
@@ -161,7 +174,7 @@ export function ArchiveList() {
         </button>
       )}
       <TaskDialog
-        target={open && { mode: "view", task: open }}
+        target={target}
         projects={board.projects}
         onRestore={restore}
         onDelete={remove}

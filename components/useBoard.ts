@@ -119,19 +119,20 @@ export function useBoard(register: UndoSlot["register"]) {
   );
 
   const moveTask = useCallback(
-    async (task: TaskDto, to: Status) => {
+    async (task: TaskDto, to: Status): Promise<boolean> => {
       clearSaveError();
       replace(task.id, { ...task, status: to, rolledBackAt: null });
       const res = await patchTask(task.id, { status: to });
       if (!res?.ok) {
         replace(task.id, task);
         fail(() => moveTask(task, to));
-        return;
+        return false;
       }
       const moved: TaskDto = await res.json();
       replace(task.id, moved);
       bump();
       register({ label: movedLabel(task.title, columnLabel(to)), undo: () => undoMove(task, moved) });
+      return true;
     },
     [patchTask, undoMove, register],
   );

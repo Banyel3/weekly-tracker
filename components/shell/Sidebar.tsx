@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useBoardContext } from "@/components/BoardProvider";
 import { formatWeekRange } from "@/lib/week";
+import { nudgeCount } from "../review/review";
 import { NavItem, SoonItem } from "./NavItem";
 import { ProjectsList } from "./ProjectsList";
 import { ThemePicker } from "./ThemePicker";
@@ -32,7 +33,7 @@ type Props = { showBars: "always" | "wide"; onNavigate?: () => void };
 
 export function Sidebar({ showBars, onNavigate }: Props) {
   const pathname = usePathname();
-  const { week, tasks, counts } = useBoardContext();
+  const { week, tasks, counts, status } = useBoardContext();
   const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
 
   return (
@@ -60,7 +61,7 @@ export function Sidebar({ showBars, onNavigate }: Props) {
             href="/review"
             icon={BarChart3}
             label="Weekly review"
-            badge={counts.nudges}
+            badge={status === "ready" ? nudgeCount(tasks) : counts.nudges}
             current={pathname === "/review"}
             onNavigate={onNavigate}
           />
