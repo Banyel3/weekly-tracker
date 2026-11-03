@@ -36,9 +36,13 @@ export function WipCard({ inProgress, overdue, carried }: Props) {
       </div>
     </StatCard>
   );
-  if (!over || reduced) return card;
   return (
-    <MovingBorderFrame borderRadius="0.75rem" className="[&>section]:border-transparent" duration={4000}>
+    <MovingBorderFrame
+      active={over && !reduced}
+      borderRadius="0.75rem"
+      className="[&>section]:border-transparent"
+      duration={4000}
+    >
       {card}
     </MovingBorderFrame>
   );

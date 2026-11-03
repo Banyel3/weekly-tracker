@@ -11,6 +11,7 @@ type FrameProps = {
   borderClassName?: string;
   borderRadius?: string;
   duration?: number;
+  active?: boolean;
 };
 
 export function MovingBorderFrame({
@@ -19,17 +20,26 @@ export function MovingBorderFrame({
   borderClassName,
   borderRadius = "0.75rem",
   duration = 4000,
+  active = true,
 }: FrameProps) {
   return (
-    <div className="relative h-full overflow-hidden p-px" style={{ borderRadius }}>
-      <div aria-hidden="true" className="absolute inset-0" style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}>
-        <MovingBorder duration={duration} rx="12" ry="12">
-          <div
-            className={cn("size-20 bg-[radial-gradient(var(--alert)_40%,transparent_60%)] opacity-80", borderClassName)}
-          />
-        </MovingBorder>
-      </div>
-      <div className={cn("relative h-full", className)} style={{ borderRadius: `calc(${borderRadius} - 1px)` }}>
+    <div className={cn("relative h-full overflow-hidden", active && "p-px")} style={{ borderRadius }}>
+      {active && (
+        <div aria-hidden="true" className="absolute inset-0" style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}>
+          <MovingBorder duration={duration} rx="12" ry="12">
+            <div
+              className={cn(
+                "size-20 bg-[radial-gradient(var(--alert)_40%,transparent_60%)] opacity-80",
+                borderClassName,
+              )}
+            />
+          </MovingBorder>
+        </div>
+      )}
+      <div
+        className={cn("relative h-full", active && className)}
+        style={{ borderRadius: `calc(${borderRadius} - 1px)` }}
+      >
         {children}
       </div>
     </div>
