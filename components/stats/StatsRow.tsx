@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatedGroup } from "../motion/AnimatedGroup";
-import { useReview } from "../useReview";
+import { useReviewContext } from "../useReview";
 import { MUTED, StatCard } from "./StatCard";
 import { PerDayCard } from "./PerDayCard";
 import { ThisWeekCard } from "./ThisWeekCard";
@@ -11,7 +11,7 @@ const GRID =
   "grid grid-cols-3 gap-3 max-[1099px]:grid-cols-2 max-[1099px]:[&>*:last-child]:col-span-2 max-[599px]:grid-cols-1 max-[599px]:[&>*:last-child]:col-span-1";
 
 export function StatsRow() {
-  const review = useReview();
+  const review = useReviewContext();
 
   if (review.status !== "ready") {
     return (

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useBoard, type BoardState } from "./useBoard";
 import { FiltersContext, useFiltersState } from "./useFilters";
 import { TaskDialogContext, useTaskDialogState } from "./useTaskDialog";
+import { ReviewContext, useReviewState } from "./useReview";
 import { UndoContext, useUndoState } from "./useUndo";
 
 const BoardContext = createContext<BoardState | null>(null);
@@ -12,6 +13,7 @@ const BoardContext = createContext<BoardState | null>(null);
 export function BoardProvider({ children }: { children: ReactNode }) {
   const undo = useUndoState();
   const board = useBoard(undo.register);
+  const review = useReviewState(board.status, board.version);
   const filters = useFiltersState();
   const dialog = useTaskDialogState();
   const pathname = usePathname();
@@ -22,9 +24,11 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   return (
     <UndoContext.Provider value={undo}>
       <BoardContext.Provider value={board}>
-        <FiltersContext.Provider value={filters}>
-          <TaskDialogContext.Provider value={dialog}>{children}</TaskDialogContext.Provider>
-        </FiltersContext.Provider>
+        <ReviewContext.Provider value={review}>
+          <FiltersContext.Provider value={filters}>
+            <TaskDialogContext.Provider value={dialog}>{children}</TaskDialogContext.Provider>
+          </FiltersContext.Provider>
+        </ReviewContext.Provider>
       </BoardContext.Provider>
     </UndoContext.Provider>
   );

@@ -52,6 +52,7 @@ export function ArchiveList() {
     }).catch(() => null);
     if (!res?.ok) return "couldn't restore · try again";
     hide(task.id, true);
+    archive.drop(task.id);
     board.reload();
     return null;
   }
@@ -65,6 +66,7 @@ export function ArchiveList() {
       commit: async () => {
         const res = await sendDelete(`/api/tasks/${task.id}`);
         if (res?.ok || res?.status === 404) {
+          archive.drop(task.id);
           board.reload();
           return;
         }

@@ -2,7 +2,7 @@
 
 import { useBoardContext } from "../BoardProvider";
 import { UndoLine } from "../board/UndoLine";
-import { useReview } from "../useReview";
+import { useReviewContext } from "../useReview";
 import { CarriedSection } from "./CarriedSection";
 import { LastWeekSection } from "./LastWeekSection";
 import { LINK_BUTTON } from "./styles";
@@ -22,7 +22,7 @@ function Retry({ text, onRetry }: { text: string; onRetry: () => void }) {
 
 export function ReviewPage() {
   const board = useBoardContext();
-  const review = useReview();
+  const review = useReviewContext();
   const failed = review.status === "error" || (review.status === "loading" && board.status === "error");
 
   return (

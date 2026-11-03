@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   DragOverlay,
@@ -23,9 +24,10 @@ import { calendarTasks, fmtYmd, monthGrid, monthOf, shiftMonth, weekDays, ymdOfD
 import { DayColumn } from "./DayColumn";
 import { CAL_INSTRUCTIONS, CAL_KEYBOARD_CODES, calAnnouncements, dayCoordinates, type ChipData } from "./dnd";
 import { ChipPreview } from "./EventChip";
-import { MonthView } from "./MonthView";
 
 type View = "week" | "month";
+
+const MonthView = dynamic(() => import("./MonthView").then((m) => m.MonthView), { ssr: false });
 
 const NAV =
   "grid size-7 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:size-11";
