@@ -6,7 +6,7 @@ import { buildMorningDigest, type DigestData } from "./digestText";
 import { REMINDER_SENT_KEY, sendTelegram, telegramConfigured } from "./reminders";
 import { dateToYmd, todayYmd, weekRange, ymdToDate } from "./week";
 
-/** Open tasks in any column plus this week's carry events; every count is derived in memory. */
+/** Open tasks in any column plus this week's carry events; counts are derived in memory except the carried count, which checks the carried ids against the board. */
 export async function loadDigestData(now: Date = new Date()): Promise<DigestData> {
   const week = weekRange(now);
   const [tasks, carryEvents] = await Promise.all([
@@ -30,11 +30,24 @@ export async function loadDigestData(now: Date = new Date()): Promise<DigestData
     }),
   ]);
 
-  const open = new Set(tasks.map((t) => t.id));
-  const carried = carriedTaskIds(
+  const carriedIds = carriedTaskIds(
     carryEvents.map((e) => ({ ...e, at: e.at.toISOString(), weekOf: week.start })),
     week.start,
-  ).filter((id) => open.has(id)).length;
+  );
+  // Same predicate as the board in listBoard, Done included, so the footer matches the sidebar count.
+  const carried =
+    carriedIds.length === 0
+      ? 0
+      : (
+          await prisma.task.findMany({
+            where: {
+              id: { in: carriedIds },
+              archived: false,
+              OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }],
+            },
+            select: { id: true },
+          })
+        ).length;
 
   return {
     today: todayYmd(now),
