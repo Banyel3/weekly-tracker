@@ -167,7 +167,15 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
     ? "Restore it to edit."
     : task
       ? (project?.name ?? "No project")
-      : `Add a task to ${statusLabel(form.status)}`;
+      : (
+        <>
+          Add a task to{" "}
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+            <Dot color={statusVar(form.status)} />
+            {statusLabel(form.status)}
+          </span>
+        </>
+      );
 
   return (
     <ResponsiveDialog
@@ -308,24 +316,26 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
               />
             </div>
             <Checklist items={form.checklist} onChange={(items) => set("checklist", items)} disabled={disabled} />
-            <div className={FIELD}>
-              <Label htmlFor={id("status")} className={LABEL}>
-                Status
-              </Label>
-              <Select value={form.status} onValueChange={(v) => set("status", v as Status)} disabled={disabled}>
-                <SelectTrigger id={id("status")} className={CONTROL}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COLUMNS.map(({ status, label }) => (
-                    <SelectItem key={status} value={status}>
-                      <Dot color={statusVar(status)} />
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {task && (
+              <div className={FIELD}>
+                <Label htmlFor={id("status")} className={LABEL}>
+                  Status
+                </Label>
+                <Select value={form.status} onValueChange={(v) => set("status", v as Status)} disabled={disabled}>
+                  <SelectTrigger id={id("status")} className={CONTROL}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COLUMNS.map(({ status, label }) => (
+                      <SelectItem key={status} value={status}>
+                        <Dot color={statusVar(status)} />
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {task && task.rolloverCount >= 2 && (
               <p className="m-0 text-xs text-muted-foreground">
                 Rolled over {task.rolloverCount} weeks in a row. Split it, shrink it, or let it go.
