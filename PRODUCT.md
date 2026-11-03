@@ -1,5 +1,7 @@
 # Product
 
+*Project management for one person, with the week as the unit and a board that resets itself every Monday.*
+
 ## Register
 
 product
@@ -10,7 +12,17 @@ One person: the owner, self-hosting this board on their own machine. They open i
 
 ## Product Purpose
 
-A weekly to-do kanban with four columns: Backlog, This Week, In Progress, Done. The week is the unit of planning. Every Monday at 00:00 Asia/Manila the board resets itself: unfinished work falls back to Backlog, finished work is archived. Each card can belong to one project, shown as a small colored chip, so the owner can tell at a glance which part of life a task belongs to. The owner should be able to glance at the board and know, in under two seconds, what is due, what is in motion, and what is left this week. Success is a board that is opened daily, touched briefly, and never fought with.
+A weekly kanban with four columns: Backlog, This Week, In Progress, Done. The week is the unit of planning. Each task can belong to one project, shown as a small coloured chip, so the owner can tell at a glance which part of life it belongs to. The owner should be able to glance at the board and know, in under two seconds, what is due, what is in motion, and what is left this week. Success is a board that is opened daily, touched briefly, and never fought with.
+
+Around the board sits a small workspace, reached from the sidebar on a laptop and the bottom tab bar on a phone: **Board** (with the stats row and the week calendar above it), **Calendar** (tasks by due date, drag to reschedule), **Weekly review**, and **Archive** (past weeks, searchable, with restore). Phase 3 tools are listed as `soon` and do nothing yet. The app installs to a phone's home screen and is reached over the owner's tailnet.
+
+## Rituals
+
+The product is built around three recurring moments:
+
+1. **Monday rollover.** At 00:00 Asia/Manila every Monday the board resets itself: finished work is archived, unfinished work returns to Backlog marked `last week`, and the sidebar says how many came back. Tasks carried twice or more get a nudge.
+2. **Friday summary.** At 18:00 every Friday, if Telegram is configured, one message states what was finished of what was planned, per project, and what keeps getting carried over.
+3. **Weekly review.** A page to read the week before planning the next: this week so far, flow and signals, eight weeks of planned versus finished, and the carried-over list with one-tap move, keep or delete.
 
 ## Brand Personality
 
@@ -29,8 +41,8 @@ Quiet, precise, personal. The interface should feel like a well-kept notebook ra
 2. **Quiet by default, loud only for time.** The single accent is reserved for what is overdue or active; everything else is tinted neutral.
 3. **Fast beats pretty.** Every interaction is immediate; drag, drop, edit, delete happen without waiting for choreography. Motion only confirms state.
 4. **Evening-first.** Designed for a dim room: low-glare surfaces, restrained contrast between layers, no pure white or pure black anywhere.
-5. **Nothing extra.** No settings, no filters, no tags. If a control does not move a card or change its five fields (title, project, due, note, status), it does not exist.
+5. **Nothing extra.** No settings screens, no tags, no custom fields. A task has five fields (title, project, due date, note, status) plus a priority (none, high, urgent) and a short checklist; if a control does not move a card, change one of those, or serve one of the three rituals, it does not exist. Filtering is limited to search, a project, or a calendar day.
 
 ## Accessibility & Inclusion
 
-WCAG 2.1 AA: text contrast at or above 4.5:1, visible focus rings on every interactive element, status conveyed by text as well as color. Drag-and-drop must have a keyboard path (dnd-kit's KeyboardSensor plus the status select in the edit dialog). Honor `prefers-reduced-motion` by disabling non-essential transitions.
+WCAG 2.1 AA: text contrast at or above 4.5:1, visible focus rings on every interactive element, status conveyed by text as well as color. Drag-and-drop must have a keyboard path (dnd-kit's KeyboardSensor, the status select in the edit dialog, and the Move sheet on phones). Touch targets are at least 44px on coarse pointers. Honor `prefers-reduced-motion`: no movement, only short opacity fades.

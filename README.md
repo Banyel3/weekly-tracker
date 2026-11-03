@@ -1,11 +1,13 @@
 # Weekly Tracker
 
-A single-user, self-hosted weekly to-do kanban board. Tasks live in four columns: Backlog, This Week, In Progress and Done. The three week columns show only the current week; Backlog is persistent. It is built with Next.js, Prisma and PostgreSQL, and runs with Docker Compose.
+Project management for one person, with the week as the unit and a board that resets itself every Monday.
+
+A single-user, self-hosted weekly kanban. Tasks live in four columns: Backlog, This Week, In Progress and Done. The three week columns show only the current week; Backlog is persistent. Around the board there is a stats row, a week calendar, a weekly review page and a searchable archive. It is built with Next.js, Prisma and PostgreSQL, and runs with Docker Compose.
 
 ## Run
 
 1. Copy `.env.example` to `.env`. This is optional and only needed for Telegram reminders.
-2. Run `docker compose up`. After pulling changes, run `docker compose up --build`; the image build needs internet access (npm registry and Google Fonts for Geist).
+2. Run `docker compose up -d --build`. Run the same command after every `git pull`: without `--build` Compose keeps running the old image. The image build needs internet access (npm registry and Google Fonts for Geist).
 3. Open `http://localhost:3000` (bound to loopback only).
 
 Database migrations are applied automatically when the app container starts.
@@ -30,14 +32,28 @@ Prerequisites: Docker, and Tailscale installed and signed in on the laptop.
 
 1. Clone the repo, copy `.env.example` to `.env` and fill it in.
 2. Run `docker compose up -d --build`. The app listens on `127.0.0.1:3000` only, so it is not reachable from the LAN.
-3. Run `tailscale serve --bg 3000`. The board is then at `https://<laptop>.<tailnet>.ts.net` for devices on your tailnet, with a managed HTTPS certificate. The tailnet is the login; the app has no auth of its own.
+3. Run `tailscale serve --bg 3000`. Find the laptop's MagicDNS name with `tailscale status` (or the Tailscale admin console); the board is then at `https://<laptop>.<tailnet>.ts.net` for devices on your tailnet, with a managed HTTPS certificate. Use that name, not an IP address. The tailnet is the login; the app has no auth of its own.
 4. Set Docker Desktop (or the Docker daemon) to start at boot. Both services use `restart: unless-stopped`, so the stack comes back after a reboot. `docker compose ps` shows the app's health from `/api/health`.
 
-Backups: `scripts/backup.sh` writes `backups/weekly-tracker-YYYYMMDD-HHMM.sql.gz` and deletes backups older than `BACKUP_KEEP_DAYS` (default 30). Run it daily from the host crontab:
+### Add to Home Screen
+
+The app ships a web app manifest and icons, so it opens full screen like an app (there is no offline mode).
+
+- **iPhone / iPad (Safari):** open `https://<laptop>.<tailnet>.ts.net`, tap Share, then **Add to Home Screen**, then **Add**.
+- **Android (Chrome):** open the same address, tap the ⋮ menu, then **Add to Home screen** (or **Install app**), then **Install**.
+
+The phone must be signed in to the same tailnet with the Tailscale app connected.
+
+### Backups
+
+`scripts/backup.sh` writes `backups/weekly-tracker-YYYYMMDD-HHMM.sql.gz` (through a `.tmp` file, so a failed dump never leaves a partial backup) and deletes backups older than `BACKUP_KEEP_DAYS` days (from the environment or `.env`; default 30). Run it daily from the host crontab. Cron runs with a minimal `PATH`, and on macOS `docker` lives in `/usr/local/bin` or `/opt/homebrew/bin`, so set `PATH` in the crontab:
 
 ```
-0 3 * * * /path/to/weekly-tracker/scripts/backup.sh
+PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin
+0 3 * * * /path/to/weekly-tracker/scripts/backup.sh >> /tmp/weekly-tracker-backup.log 2>&1
 ```
+
+`BACKUP_DIR` writes somewhere else; `COMPOSE_PROJECT_NAME` targets a different Compose project than the one named after the checkout folder.
 
 Restore with `scripts/restore.sh backups/<file>.sql.gz` while the stack is running. It replaces the current data.
 
@@ -51,3 +67,4 @@ Moving to another machine: run `scripts/backup.sh` on the old machine and copy t
 4. Run `npx prisma migrate dev`.
 5. Run `npm run dev` and open `http://localhost:3000`.
 6. Run `npm test` for the unit tests.
+7. App icons live in `public/icons/`; after editing the glyph in `scripts/icons.sh`, rerun it (needs `rsvg-convert` from librsvg).
