@@ -16,10 +16,10 @@ import {
   lastWeekHeading,
   lastWeekLine,
   nudgeCount,
-  backCount,
   trendColor,
   type DecidedMap,
 } from "./review";
+import { backCount } from "../shell/backCount";
 
 const MONDAY = "2026-11-02";
 

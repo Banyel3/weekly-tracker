@@ -82,12 +82,6 @@ export function decidedText(kind: Decision, title: string): string {
   return deletedLabel(title);
 }
 
-/** Carried ids come from the server's ROLLED_BACK events; counting the ones still loaded follows deletes at once. */
-export function backCount(carriedIds: string[], tasks: TaskDto[]): number {
-  const live = new Set(tasks.map((t) => t.id));
-  return carriedIds.filter((id) => live.has(id)).length;
-}
-
 const TREND_COLORS: Record<string, string> = { planned: "var(--chart-2)", finished: "var(--primary)" };
 
 export function trendColor(weekStart: string, category: string, current: string): string {
