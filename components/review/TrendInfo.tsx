@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 
 export function TrendInfo() {
   return (
-    <Hint label="Planned counts every task put on a week; finished leaves out ones reopened that week; deleted tasks count only as dropped.">
+    <Hint label="Planned counts every task put on a week and not taken off it; finished leaves out ones reopened that week; deleted tasks count only as dropped.">
       <Button
         variant="ghost"
         size="icon"

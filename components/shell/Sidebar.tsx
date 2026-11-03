@@ -16,7 +16,7 @@ import { useBoardContext } from "@/components/BoardProvider";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatWeekRange } from "@/lib/week";
-import { nudgeCount } from "../review/review";
+import { backCount, nudgeCount } from "../review/review";
 import { NavItem, SoonItem } from "./NavItem";
 import { ProjectsList } from "./ProjectsList";
 import { ThemePicker } from "./ThemePicker";
@@ -40,8 +40,8 @@ type Props = {
 
 export function Sidebar({ showBars, titleAs: Title = "h1", onNavigate }: Props) {
   const pathname = usePathname();
-  const { week, tasks, counts, status } = useBoardContext();
-  const rolledBack = week ? tasks.filter((t) => t.status === "BACKLOG" && t.rolledBackAt === week.start).length : 0;
+  const { week, tasks, counts, carriedIds, status } = useBoardContext();
+  const rolledBack = backCount(carriedIds, tasks);
 
   return (
     <div className="flex min-h-full flex-col gap-[22px] px-4 py-5 text-sidebar-foreground">

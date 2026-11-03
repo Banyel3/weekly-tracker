@@ -16,6 +16,8 @@ import {
   lastWeekHeading,
   lastWeekLine,
   nudgeCount,
+  backCount,
+  trendColor,
   type DecidedMap,
 } from "./review";
 
@@ -90,6 +92,24 @@ describe("decidedText", () => {
     expect(decidedText("moved", "Pay rent")).toBe("moved to This week");
     expect(decidedText("kept", "Pay rent")).toBe("kept in Backlog");
     expect(decidedText("deleted", "Pay rent")).toBe("deleted “Pay rent”");
+  });
+});
+
+describe("backCount", () => {
+  it("counts carried tasks still on the board, wherever they moved", () => {
+    const tasks = [task("a"), task("b", { status: "THIS_WEEK", weekOf: MONDAY, rolledBackAt: null }), task("c")];
+    expect(backCount(["a", "b", "gone"], tasks)).toBe(2);
+    expect(backCount([], tasks)).toBe(0);
+  });
+});
+
+describe("trendColor", () => {
+  it("draws the current week at full strength and dims earlier weeks", () => {
+    expect(trendColor("2026-11-02", "planned", "2026-11-02")).toBe("var(--chart-2)");
+    expect(trendColor("2026-11-02", "finished", "2026-11-02")).toBe("var(--primary)");
+    expect(trendColor("2026-10-26", "finished", "2026-11-02")).toBe(
+      "color-mix(in oklch, var(--primary) 55%, transparent)",
+    );
   });
 });
 

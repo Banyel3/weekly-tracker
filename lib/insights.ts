@@ -1,17 +1,9 @@
-import type { EventType, TaskEvent } from "@prisma/client";
+import type { TaskEvent } from "@prisma/client";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { carriedTaskIds, deletedTaskIds, weekOfEvent, type InsightEvent } from "./carried";
 import { prisma } from "./db";
 import { toDto, type TaskDto } from "./tasks";
 import { TIMEZONE, currentWeekStart, dateToYmd, shiftYmd, todayYmd, ymdToDate } from "./week";
-
-export type InsightEvent = {
-  taskId: string;
-  type: EventType;
-  at: string;
-  weekOf: string | null;
-  from: string | null;
-  to: string | null;
-};
 
 export type InsightsDto = {
   origin: {
@@ -34,6 +26,8 @@ export type InsightsDto = {
   pattern: string | null;
 };
 
+export { carriedTaskIds, deletedTaskIds, type InsightEvent };
+
 export type InsightsData = { tasks: TaskDto[]; events: InsightEvent[] };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,7 +39,6 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const ms = (iso: string) => new Date(iso).getTime();
 const manilaYmd = (iso: string) => formatInTimeZone(new Date(iso), TIMEZONE, "yyyy-MM-dd");
-const weekOfEvent = (e: InsightEvent) => e.weekOf ?? currentWeekStart(new Date(e.at));
 const round = (n: number, places: number) => Math.round(n * 10 ** places) / 10 ** places;
 const ratio = (n: number, d: number) => (d > 0 ? round(n / d, 2) : null);
 
@@ -64,25 +57,6 @@ function finishedIn(events: InsightEvent[], week: string): InsightEvent[] {
       done.type === "DONE" &&
       !inWeek.some((e) => e.type === "REOPENED" && e.taskId === done.taskId && ms(e.at) > ms(done.at)),
   );
-}
-
-/** Tasks whose latest DELETED / RESTORED event is a delete: their history stays but they no longer count. */
-export function deletedTaskIds(events: InsightEvent[]): Set<string> {
-  const deleted = new Set<string>();
-  for (const e of [...events].sort((a, b) => ms(a.at) - ms(b.at))) {
-    if (e.type === "DELETED") deleted.add(e.taskId);
-    if (e.type === "RESTORED") deleted.delete(e.taskId);
-  }
-  return deleted;
-}
-
-/** Tasks the rollover returned to Backlog at the start of `week`, minus deleted ones. Shared by review and insights. */
-export function carriedTaskIds(events: InsightEvent[], week: string): string[] {
-  const deleted = deletedTaskIds(events);
-  const ids = events
-    .filter((e) => e.type === "ROLLED_BACK" && weekOfEvent(e) === week && !deleted.has(e.taskId))
-    .map((e) => e.taskId);
-  return [...new Set(ids)];
 }
 
 function createdTimes(tasks: TaskDto[], events: InsightEvent[]): Map<string, string> {
@@ -154,8 +128,13 @@ export function buildInsights(now: Date, { tasks, events }: InsightsData): Insig
   const reschedules = thisWeek.filter((e) => e.type === "RESCHEDULED").length;
   const midWeekRatio = ratio(addedAfterMonday, planned.length);
 
-  const plannedIn = (list: InsightEvent[], weekStart: string) =>
-    new Set(list.filter((e) => e.type === "PLANNED" && weekOfEvent(e) === weekStart).map((e) => e.taskId));
+  const plannedIn = (list: InsightEvent[], weekStart: string) => {
+    const last = new Map<string, InsightEvent["type"]>();
+    for (const e of list) {
+      if ((e.type === "PLANNED" || e.type === "UNPLANNED") && weekOfEvent(e) === weekStart) last.set(e.taskId, e.type);
+    }
+    return new Set([...last].filter(([, type]) => type === "PLANNED").map(([id]) => id));
+  };
   const trend = Array.from({ length: TREND_WEEKS }, (_, i) => {
     const weekStart = shiftYmd(week, (i - TREND_WEEKS + 1) * 7);
     const dropped = [...plannedIn(all, weekStart)].filter((id) => deleted.has(id)).length;

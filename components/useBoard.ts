@@ -57,6 +57,7 @@ export function useBoard(register: UndoSlot["register"]) {
   const [tasks, setTasks] = useState<TaskDto[]>([]);
   const [today, setToday] = useState<string | null>(null);
   const [counts, setCounts] = useState<BoardCounts>({ live: 0, archived: 0, nudges: 0 });
+  const [carriedIds, setCarriedIds] = useState<string[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<BoardError>(null);
   const [version, setVersion] = useState(0);
@@ -88,6 +89,7 @@ export function useBoard(register: UndoSlot["register"]) {
     setWeek(data.week);
     setToday(data.today);
     setCounts(data.counts);
+    setCarriedIds(data.carriedIds);
     const goneProject = (id: string | null) => id !== null && hiddenProjects.current.has(id);
     setProjects(data.projects.filter((p) => !goneProject(p.id)));
     setTasks(
@@ -332,6 +334,7 @@ export function useBoard(register: UndoSlot["register"]) {
     week,
     today,
     counts,
+    carriedIds,
     projects,
     tasks,
     status,

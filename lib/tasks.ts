@@ -1,5 +1,6 @@
 import { EventType, Priority, Status, type Prisma, type Task } from "@prisma/client";
 import { z } from "zod";
+import { carriedTaskIds } from "./carried";
 import { checklistSchema, normalizeChecklist, readChecklist, type ChecklistItem } from "./checklist";
 import { prisma } from "./db";
 import { createEvents, recordEvents, updateEvents, type EventChange } from "./events";
@@ -105,11 +106,13 @@ export type BoardDto = {
   projects: ProjectDto[];
   tasks: TaskDto[];
   counts: BoardCounts;
+  /** Tasks the rollover returned to Backlog this Monday (from ROLLED_BACK events, so re-planning keeps them). */
+  carriedIds: string[];
 };
 
 export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
   const week = weekRange(now);
-  const [projects, tasks, live, archived, nudges] = await Promise.all([
+  const [projects, tasks, live, archived, nudges, carryEvents] = await Promise.all([
     listProjects(),
     prisma.task.findMany({
       where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
@@ -118,6 +121,10 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
     prisma.task.count({ where: { archived: false } }),
     prisma.task.count({ where: { archived: true } }),
     prisma.task.count({ where: { archived: false, status: Status.BACKLOG, rolloverCount: { gte: 2 } } }),
+    prisma.taskEvent.findMany({
+      where: { weekOf: ymdToDate(week.start), type: { in: [EventType.ROLLED_BACK, EventType.DELETED, EventType.RESTORED] } },
+      select: { taskId: true, type: true, at: true },
+    }),
   ]);
   const dtos = tasks.map(toDto);
   const sorted = Object.values(Status).flatMap((status) =>
@@ -126,7 +133,11 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
       week.start,
     ),
   );
-  return { week, today: todayYmd(now), projects, tasks: sorted, counts: { live, archived, nudges } };
+  const carriedIds = carriedTaskIds(
+    carryEvents.map((e) => ({ ...e, at: e.at.toISOString(), weekOf: week.start })),
+    week.start,
+  );
+  return { week, today: todayYmd(now), projects, tasks: sorted, counts: { live, archived, nudges }, carriedIds };
 }
 
 function completedAtFor(status: Status, previous: Task | null, now: Date): Date | null {
@@ -187,16 +198,17 @@ export function updateData(input: UpdateTaskInput, existing: Task, now: Date): P
   };
 }
 
+/** existing is read inside the transaction so the events and completedAt follow the row the update replaces. */
 export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
-  const existing = await prisma.task.findUnique({ where: { id } });
-  if (!existing) return null;
   const now = new Date();
   const task = await prisma.$transaction(async (tx) => {
+    const existing = await tx.task.findUnique({ where: { id } });
+    if (!existing) return null;
     const updated = await tx.task.update({ where: { id }, data: updateData(input, existing, now) });
     await recordEvents(tx, withTask(id, updateEvents(input, existing)), now);
     return updated;
   });
-  return toDto(task);
+  return task && toDto(task);
 }
 
 export async function deleteTask(id: string): Promise<TaskDto | null> {

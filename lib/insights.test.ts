@@ -222,6 +222,21 @@ describe("trend", () => {
     expect(insights.flow.medianCreatedToDoneDays).toBe(1);
   });
 
+  it("leaves out tasks whose last PLANNED or UNPLANNED event in the week is UNPLANNED", () => {
+    const tasks = [task("moved", { status: "BACKLOG", weekOf: null }), task("back", { status: "BACKLOG", weekOf: null })];
+    const events = [
+      ev("moved", "PLANNED", "2026-10-27T01:00:00Z"),
+      ev("moved", "UNPLANNED", "2026-10-27T02:00:00Z"),
+      ev("back", "PLANNED", "2026-10-27T01:00:00Z"),
+      ev("back", "UNPLANNED", "2026-10-27T02:00:00Z"),
+      ev("back", "PLANNED", "2026-10-28T01:00:00Z"),
+      ev("gone", "PLANNED", "2026-10-27T01:00:00Z"),
+      ev("gone", "UNPLANNED", "2026-10-27T02:00:00Z"),
+      ev("gone", "DELETED", "2026-10-29T02:00:00Z"),
+    ];
+    expect(build(tasks, events).trend[6]).toEqual({ weekStart: LAST, planned: 1, finished: 0, dropped: 0 });
+  });
+
   it("matches the headline for the current week", () => {
     const tasks = [task("a", { status: "DONE" }), task("b")];
     const events = [ev("x", "PLANNED", "2026-11-02T03:00:00Z"), ev("x", "UNPLANNED", "2026-11-02T04:00:00Z")];

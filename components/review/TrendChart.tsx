@@ -2,11 +2,9 @@
 
 import type { InsightsDto } from "@/lib/insights";
 import { BarChart } from "../tremor/BarChart";
-import { trendTick } from "./review";
+import { trendColor, trendTick } from "./review";
 
 type Week = InsightsDto["trend"][number];
-
-const COLORS: Record<string, string> = { planned: "var(--chart-2)", finished: "var(--primary)" };
 
 export function TrendChart({ trend, current }: { trend: Week[]; current: string }) {
   return (
@@ -14,7 +12,7 @@ export function TrendChart({ trend, current }: { trend: Week[]; current: string 
       data={trend}
       index="weekStart"
       category={["planned", "finished"]}
-      colorOf={(_, category) => COLORS[category]}
+      colorOf={(week, category) => trendColor(week.weekStart, category, current)}
       tickFormatter={(weekStart) => trendTick(weekStart, current)}
       barCategoryGap="22%"
       className="h-[120px]"
