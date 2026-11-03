@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { formatInTimeZone } from "date-fns-tz";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { UndoLine } from "../board/UndoLine";
 import { sendDelete } from "../useBoard";
 import { useDebounced } from "../useDebounced";
 import { deletedLabel, useUndo } from "../useUndo";
+import { hiddenArchiveRows } from "./archiveCache";
 import { useArchive } from "./useArchive";
 
 // Opens on click only, so the dialog and its form controls stay out of the first load.
@@ -35,19 +36,13 @@ export function ArchiveList() {
   const [q, setQ] = useState("");
   const query = useDebounced(q.trim(), SEARCH_DEBOUNCE_MS);
   const archive = useArchive(query);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const hidden = useSyncExternalStore(hiddenArchiveRows.subscribe, hiddenArchiveRows.get, hiddenArchiveRows.get);
   const [open, setOpen] = useState<TaskDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const target = useMemo(() => open && { mode: "view" as const, task: open }, [open]);
   const projectOf = (id: string | null) => board.projects.find((p) => p.id === id) ?? null;
 
-  const hide = (id: string, on: boolean) =>
-    setHidden((h) => {
-      const next = new Set(h);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+  const hide = hiddenArchiveRows.set;
 
   async function restore(task: TaskDto): Promise<string | null> {
     const res = await fetch(`/api/tasks/${task.id}`, {
@@ -56,7 +51,6 @@ export function ArchiveList() {
       body: JSON.stringify({ archived: false }),
     }).catch(() => null);
     if (!res?.ok) return "couldn't restore · try again";
-    hide(task.id, true);
     archive.drop(task.id);
     board.reload();
     return null;

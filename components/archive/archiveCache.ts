@@ -20,3 +20,27 @@ export function appendPage(base: ArchiveDto, next: ArchiveDto): ArchiveDto {
 export function dropTask(page: ArchiveDto, id: string): ArchiveDto {
   return { ...page, weeks: page.weeks.map((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) })) };
 }
+
+/** A subscribable id set kept at module level, so it outlives the component that changed it. */
+export function createIdSet() {
+  let ids: ReadonlySet<string> = new Set();
+  const listeners = new Set<() => void>();
+  return {
+    get: () => ids,
+    set(id: string, on: boolean) {
+      if (ids.has(id) === on) return;
+      const next = new Set(ids);
+      if (on) next.add(id);
+      else next.delete(id);
+      ids = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+  };
+}
+
+/** Rows deleted from /archive: hidden while the 5 s undo window runs, even after leaving and returning. */
+export const hiddenArchiveRows = createIdSet();

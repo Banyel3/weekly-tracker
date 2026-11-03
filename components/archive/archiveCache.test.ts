@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ArchiveDto, ArchiveWeek } from "@/lib/archive";
 import type { TaskDto } from "@/lib/tasks";
-import { appendPage, dropTask, mergeFirstPage } from "./archiveCache";
+import { appendPage, createIdSet, dropTask, mergeFirstPage } from "./archiveCache";
 
 const week = (start: string, ...ids: string[]): ArchiveWeek => ({
   start,
@@ -39,5 +39,37 @@ describe("archive cache helpers", () => {
 
   it("drops a restored or deleted task from every week", () => {
     expect(dropTask(loaded, "b").weeks.map((w) => w.tasks.length)).toEqual([1, 0, 1]);
+  });
+});
+
+describe("createIdSet (pending archive deletes)", () => {
+  it("keeps a hidden id for a later subscriber, as on returning to /archive", () => {
+    const rows = createIdSet();
+    const leaving = rows.subscribe(() => {});
+    rows.set("t1", true);
+    leaving();
+    expect(rows.get().has("t1")).toBe(true);
+  });
+
+  it("un-hides on undo and notifies the mounted list with a new snapshot", () => {
+    const rows = createIdSet();
+    rows.set("t1", true);
+    const before = rows.get();
+    const listener = vi.fn();
+    rows.subscribe(listener);
+    rows.set("t1", false);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(rows.get()).not.toBe(before);
+    expect(rows.get().has("t1")).toBe(false);
+  });
+
+  it("keeps the snapshot stable when nothing changes", () => {
+    const rows = createIdSet();
+    const listener = vi.fn();
+    rows.subscribe(listener);
+    const before = rows.get();
+    rows.set("t1", false);
+    expect(rows.get()).toBe(before);
+    expect(listener).not.toHaveBeenCalled();
   });
 });
