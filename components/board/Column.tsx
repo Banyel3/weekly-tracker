@@ -50,7 +50,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
       )}
     >
       <div className="flex items-center gap-2 px-2.5 pt-2.5 pb-2">
-        <h2 id={headingId} className="m-0">
+        <h2 id={headingId} className="m-0 font-medium">
           <Badge variant="outline" className="gap-1.5 px-2 py-0.5 text-xs font-medium">
             <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: statusVar(status) }} />
             {label}

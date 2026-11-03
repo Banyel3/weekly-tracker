@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Sidebar showBars="wide" />
       </aside>
       <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center border-b border-sidebar-border bg-sidebar px-4 min-[900px]:hidden">
-        {week && <h1 className="m-0 truncate text-sm font-medium">{formatWeekRange(week)}</h1>}
+        {week && <h1 className="m-0 truncate text-[15px] leading-5 font-semibold">{formatWeekRange(week)}</h1>}
       </header>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

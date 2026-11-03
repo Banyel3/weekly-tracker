@@ -41,7 +41,7 @@ export function Sidebar({ showBars, onNavigate }: Props) {
   return (
     <div className="flex min-h-full flex-col gap-[22px] px-4 py-5 text-sidebar-foreground">
       <header className="flex min-h-5 flex-col gap-1 pr-6">
-        {week && <h1 className="m-0 text-sm leading-5 font-medium">{formatWeekRange(week)}</h1>}
+        {week && <h1 className="m-0 text-[15px] leading-5 font-semibold">{formatWeekRange(week)}</h1>}
         {rolledBack > 0 && (
           <p className="m-0 text-xs text-muted-foreground tabular-nums">{rolledBack} back from last week</p>
         )}
