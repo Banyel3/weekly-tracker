@@ -82,13 +82,6 @@ export function decidedText(kind: Decision, title: string): string {
   return deletedLabel(title);
 }
 
-const TREND_COLORS: Record<string, string> = { planned: "var(--chart-2)", finished: "var(--primary)" };
-
-export function trendColor(weekStart: string, category: string, current: string): string {
-  const color = TREND_COLORS[category];
-  return weekStart === current ? color : `color-mix(in oklch, ${color} 55%, transparent)`;
-}
-
 /** Same rule as the server's counts.nudges, so the sidebar badge follows optimistic board changes. */
 export function nudgeCount(tasks: TaskDto[]): number {
   return tasks.filter((t) => !t.archived && t.status === "BACKLOG" && t.rolloverCount >= 2).length;

@@ -16,10 +16,10 @@ import {
   lastWeekHeading,
   lastWeekLine,
   nudgeCount,
-  trendColor,
   type DecidedMap,
 } from "./review";
 import { backCount } from "../shell/backCount";
+import { trendColor } from "./TrendChart";
 
 const MONDAY = "2026-11-02";
 
@@ -108,7 +108,7 @@ describe("trendColor", () => {
     expect(trendColor("2026-11-02", "planned", "2026-11-02")).toBe("var(--chart-2)");
     expect(trendColor("2026-11-02", "finished", "2026-11-02")).toBe("var(--primary)");
     expect(trendColor("2026-10-26", "finished", "2026-11-02")).toBe(
-      "color-mix(in oklch, var(--primary) 55%, transparent)",
+      "color-mix(in oklch,var(--primary) 55%,#0000)",
     );
   });
 });
