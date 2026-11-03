@@ -5,7 +5,6 @@ import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Hint } from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
 import { WIP_LIMIT } from "@/lib/constants";
 import type { ProjectDto } from "@/lib/projects";
@@ -14,7 +13,6 @@ import { cn } from "@/lib/utils";
 import type { WeekRange } from "@/lib/week";
 import { statusVar, type Status } from "./status";
 import { TaskCard } from "./TaskCard";
-
 
 type Props = {
   status: Status;
@@ -62,20 +60,6 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
             {overLimit && <span className="sr-only">, over the limit of {WIP_LIMIT}</span>}
           </span>
         )}
-        {week && (
-          <Hint label="Add task">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Add task"
-              aria-describedby={headingId}
-              onClick={() => onAdd(status)}
-              className="ml-auto size-7 text-muted-foreground hover:text-foreground pointer-coarse:size-11"
-            >
-              <Icon icon={Plus} />
-            </Button>
-          </Hint>
-        )}
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1">
         {loading ? (
@@ -109,6 +93,7 @@ export function Column({ status, label, week, tasks, total, projectOf, loading, 
         <Button
           variant="ghost"
           size="sm"
+          aria-describedby={headingId}
           onClick={() => onAdd(status)}
           className="mx-2 mb-2 flex-none self-start text-muted-foreground hover:text-foreground pointer-coarse:h-11"
         >
