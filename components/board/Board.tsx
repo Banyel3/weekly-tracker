@@ -150,7 +150,7 @@ export function Board() {
       if (drag?.pointer) setDropped(task.id);
       board.moveTask(task, to);
       // A keyboard drop remounts the card in its new column; keep focus on it so the next arrow press continues.
-      if (drag && !drag.pointer) requestAnimationFrame(() => requestAnimationFrame(() => liveTitle(task.id)?.focus()));
+      if (drag && !drag.pointer) requestAnimationFrame(() => requestAnimationFrame(() => { if (document.activeElement === document.body) liveTitle(task.id)?.focus(); }));
     }
   }
 

@@ -28,7 +28,7 @@ const SOON = [
   { icon: Inbox, label: "Quick capture" },
   { icon: Repeat, label: "Recurring tasks" },
   { icon: Send, label: "Telegram digest" },
-  { icon: Sparkles, label: "Someday / maybe" },
+  { icon: Sparkles, label: "Future tasks" },
   { icon: Command, label: "Shortcuts" },
 ];
 
