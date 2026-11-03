@@ -23,7 +23,12 @@ export function MovingBorderFrame({
   active = true,
 }: FrameProps) {
   return (
-    <div className={cn("relative h-full overflow-hidden", active && "p-px")} style={{ borderRadius }}>
+    // clip-path clips the travelling glow to the card's rounded rect even while an ancestor is transformed
+    // (overflow + border-radius alone lets it bleed past the corners in WebKit).
+    <div
+      className="relative isolate h-full overflow-hidden"
+      style={{ borderRadius, clipPath: active ? `inset(0 round ${borderRadius})` : undefined }}
+    >
       {active && (
         <div aria-hidden="true" className="absolute inset-0" style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}>
           <MovingBorder duration={duration} rx="12" ry="12">
@@ -38,7 +43,7 @@ export function MovingBorderFrame({
       )}
       <div
         className={cn("relative h-full", active && className)}
-        style={{ borderRadius: `calc(${borderRadius} - 1px)` }}
+        style={{ borderRadius }}
       >
         {children}
       </div>

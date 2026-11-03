@@ -1,17 +1,21 @@
 "use client";
 
-import { useReducedMotion } from "motion/react";
 import { WIP_LIMIT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { MovingBorderFrame } from "../aceternity/MovingBorder";
+import { useBoardContext } from "../BoardProvider";
 import { NumberTicker } from "../magic/NumberTicker";
+import { useReducedMotion } from "../motion/config";
 import { HEADING, KPI, KPI_UNIT, MUTED, StatCard } from "./StatCard";
 import { wipLine } from "./stats";
 
-type Props = { inProgress: number; overdue: number; carried: number };
+type Props = { overdue: number; carried: number };
 
-export function WipCard({ inProgress, overdue, carried }: Props) {
+/** The count and the over-limit state both come from the live board, so they can never disagree. */
+export function WipCard({ overdue, carried }: Props) {
   const reduced = useReducedMotion();
+  const { tasks } = useBoardContext();
+  const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS" && !t.archived).length;
   const over = inProgress > WIP_LIMIT;
   const card = (
     <StatCard
@@ -40,7 +44,7 @@ export function WipCard({ inProgress, overdue, carried }: Props) {
     <MovingBorderFrame
       active={over && !reduced}
       borderRadius="0.75rem"
-      className="[&>section]:border-transparent"
+      className="[&>section]:border-transparent [&>section]:bg-clip-padding"
       duration={4000}
     >
       {card}

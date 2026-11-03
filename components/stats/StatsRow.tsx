@@ -31,7 +31,7 @@ export function StatsRow() {
     <AnimatedGroup className={GRID}>
       <ThisWeekCard finished={thisWeek.finished} planned={thisWeek.planned} today={today} />
       <PerDayCard perDay={perDay} today={today} />
-      <WipCard inProgress={thisWeek.inProgress} overdue={thisWeek.overdue} carried={stillCarried} />
+      <WipCard overdue={thisWeek.overdue} carried={stillCarried} />
     </AnimatedGroup>
   );
 }

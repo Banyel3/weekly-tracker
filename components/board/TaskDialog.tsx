@@ -12,6 +12,7 @@ import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { ColorSwatches, colorVar } from "../ColorSwatches";
 import type { NewTask } from "../useBoard";
+import { useIsPhone } from "../useMediaQuery";
 import { Checklist } from "./Checklist";
 import { COLUMNS, type Status } from "./dnd";
 import { PriorityPills } from "./PriorityPills";
@@ -70,6 +71,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const deleted = useRef(false);
+  const phone = useIsPhone();
 
   const task = target && target.mode !== "create" ? target.task : null;
   const readOnly = target?.mode === "view";
@@ -161,6 +163,12 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
         showCloseButton={false}
         onDismiss={() => !busy && onClose()}
         aria-describedby={undefined}
+        onOpenAutoFocus={(e) => {
+          // On phones the sheet takes focus itself so the keyboard does not pop up over it.
+          if (!phone) return;
+          e.preventDefault();
+          (e.currentTarget as HTMLElement | null)?.focus();
+        }}
         onEscapeKeyDown={(e) => busy && e.preventDefault()}
         onInteractOutside={(e) => busy && e.preventDefault()}
         onCloseAutoFocus={(e) => {
@@ -178,7 +186,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
             Title
             <Textarea
               required
-              autoFocus
+              autoFocus={!phone}
               rows={2}
               maxLength={200}
               disabled={disabled}
