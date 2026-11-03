@@ -18,8 +18,7 @@ import { ColorSwatches, colorVar } from "../ColorSwatches";
 import type { NewTask } from "../useBoard";
 import { useIsPhone } from "../useMediaQuery";
 import { Checklist } from "./Checklist";
-import { statusVar } from "./Column";
-import { COLUMNS, type Status } from "./dnd";
+import { COLUMNS, statusLabel, statusVar, type Status } from "./status";
 import { PriorityPills } from "./PriorityPills";
 
 const DEFAULT_COLOR: ProjectColor = "teal";
@@ -30,8 +29,6 @@ const FIELD = "flex flex-col gap-1.5";
 const LABEL = "text-xs font-medium text-muted-foreground";
 const CONTROL = "h-9 w-full rounded-md border-input bg-background text-sm text-foreground shadow-none pointer-coarse:h-11";
 const AREA = "min-h-0 rounded-md border-input bg-background py-2 text-sm text-foreground shadow-none resize-none";
-
-const labelOf = (status: Status) => COLUMNS.find((c) => c.status === status)?.label ?? status;
 
 function Dot({ color }: { color: string }) {
   return <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: color }} />;
@@ -170,7 +167,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
     ? "Restore it to edit."
     : task
       ? (project?.name ?? "No project")
-      : `Add a task to ${labelOf(form.status)}`;
+      : `Add a task to ${statusLabel(form.status)}`;
 
   return (
     <ResponsiveDialog
@@ -263,7 +260,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
                 <div className="relative">
                   <Icon
                     icon={CalendarDays}
-                    className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
+                    className="pointer-events-none absolute top-1/2 left-2.5 z-10 -translate-y-1/2 text-muted-foreground"
                   />
                   <Input
                     id={id("due")}
@@ -271,7 +268,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
                     value={form.dueDate}
                     disabled={disabled}
                     onChange={(e) => set("dueDate", e.target.value)}
-                    className={cn(CONTROL, "pl-8 [color-scheme:dark]")}
+                    className={cn(CONTROL, "relative cursor-pointer pl-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-auto [&::-webkit-calendar-picker-indicator]:w-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0")}
                   />
                 </div>
               </div>
@@ -358,11 +355,11 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
             </Button>
             {readOnly ? (
               <Button type="button" onClick={restore} disabled={busy !== null} className="pointer-coarse:h-11">
-                {busy === "restoring" ? "restoring…" : "restore to Backlog"}
+                {busy === "restoring" ? "Restoring…" : "Restore to Backlog"}
               </Button>
             ) : (
               <Button type="submit" disabled={busy !== null} className="pointer-coarse:h-11">
-                {busy === "saving" ? "saving…" : task ? "Save" : "Add"}
+                {busy === "saving" ? "Saving…" : task ? "Save" : "Add"}
               </Button>
             )}
           </DialogFooter>

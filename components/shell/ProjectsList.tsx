@@ -330,7 +330,7 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
       )}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "adding…" : "Add"}
+          {busy ? "Adding…" : "Add"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onDone}>
           Cancel

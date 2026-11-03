@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { formatInTimeZone } from "date-fns-tz";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,16 @@ import type { TaskDto } from "@/lib/tasks";
 import { TIMEZONE, ymdToDate } from "@/lib/week";
 import { useBoardContext } from "../BoardProvider";
 import { colorVar } from "../ColorSwatches";
-import { PriorityFlag } from "../board/PriorityPills";
+import { PriorityFlag } from "../board/PriorityFlag";
 import { SearchField } from "../board/SearchField";
-import { TaskDialog } from "../board/TaskDialog";
 import { UndoLine } from "../board/UndoLine";
 import { sendDelete } from "../useBoard";
 import { useDebounced } from "../useDebounced";
 import { deletedLabel, useUndo } from "../useUndo";
 import { useArchive } from "./useArchive";
+
+// Opens on click only, so the dialog and its form controls stay out of the first load.
+const TaskDialog = dynamic(() => import("../board/TaskDialog").then((m) => m.TaskDialog), { ssr: false });
 
 const SEARCH_ID = "archive-search";
 const ymdLabel = (ymd: string) => formatInTimeZone(ymdToDate(ymd), "UTC", "MMM d");
@@ -129,7 +132,7 @@ export function ArchiveList() {
                       onClick={() => setOpen(task)}
                       className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
                     >
-                      <PriorityFlag priority={task.priority} />
+                      <PriorityFlag priority={task.priority} omitWhenNone />
                       <span className="min-w-0 flex-1 truncate">{task.title}</span>
                       {project && (
                         <Badge variant="outline" className="max-w-[40%] min-w-0 gap-1.5 px-2 py-0.5 font-normal text-muted-foreground">
@@ -167,7 +170,7 @@ export function ArchiveList() {
           disabled={archive.loadingMore}
           className="self-start text-muted-foreground hover:text-foreground pointer-coarse:h-11"
         >
-          {archive.loadingMore ? "loading…" : "Older weeks"}
+          {archive.loadingMore ? "Loading…" : "Older weeks"}
         </Button>
       )}
       <TaskDialog

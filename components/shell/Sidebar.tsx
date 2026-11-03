@@ -13,6 +13,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useBoardContext } from "@/components/BoardProvider";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { formatWeekRange } from "@/lib/week";
 import { nudgeCount } from "../review/review";
 import { NavItem, SoonItem } from "./NavItem";
@@ -75,7 +77,12 @@ export function Sidebar({ showBars, onNavigate }: Props) {
           />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className={GROUP_LABEL}>TOOLS · PHASE 3</span>
+          <span className={cn(GROUP_LABEL, "flex items-center gap-2")}>
+            TOOLS
+            <Badge variant="outline" className="h-4 px-1.5 text-[10px] font-medium tracking-normal text-muted-foreground">
+              Phase 3
+            </Badge>
+          </span>
           {SOON.map((item) => (
             <SoonItem key={item.label} icon={item.icon} label={item.label} />
           ))}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isoWeekday, paceLine, perDayBars, perDayLabel, percent, wipLine } from "./stats";
+import { isoWeekday, pace, perDayBars, perDayLabel, percent, wipLine } from "./stats";
 
 describe("isoWeekday", () => {
   it("counts Monday as 1 and Sunday as 7", () => {
@@ -9,15 +9,15 @@ describe("isoWeekday", () => {
   });
 });
 
-describe("paceLine", () => {
+describe("pace", () => {
   it("projects finished tasks over seven days", () => {
-    expect(paceLine(3, 10, "2026-10-31")).toBe("day 6 of 7 · on pace for 4");
-    expect(paceLine(1, 4, "2026-11-02")).toBe("day 1 of 7");
-    expect(paceLine(0, 4, "2026-11-04")).toBe("day 3 of 7 · on pace for 0");
+    expect(pace(3, 10, "2026-10-31")).toEqual({ day: "day 6 of 7", pace: "on pace for 4" });
+    expect(pace(1, 4, "2026-11-02")).toEqual({ day: "day 1 of 7", pace: null });
+    expect(pace(0, 4, "2026-11-04")).toEqual({ day: "day 3 of 7", pace: "on pace for 0" });
   });
 
   it("says nothing is planned when the week is empty", () => {
-    expect(paceLine(0, 0, "2026-11-04")).toBe("nothing planned yet");
+    expect(pace(0, 0, "2026-11-04")).toEqual({ day: "day 3 of 7", pace: "nothing planned yet" });
   });
 });
 

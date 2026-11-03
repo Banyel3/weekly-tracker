@@ -12,10 +12,9 @@ import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import type { WeekRange } from "@/lib/week";
-import type { Status } from "./dnd";
+import { statusVar, type Status } from "./status";
 import { TaskCard } from "./TaskCard";
 
-export const statusVar = (status: Status) => `var(--status-${status.toLowerCase().replace("_", "-")})`;
 
 type Props = {
   status: Status;

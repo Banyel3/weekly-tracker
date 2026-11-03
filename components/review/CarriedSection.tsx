@@ -2,18 +2,15 @@
 
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
-import { COLUMNS } from "../board/dnd";
+import { statusLabel } from "../board/status";
 import { useUndo } from "../useUndo";
 import { ProjectDot } from "./ProjectDot";
 import { carriedRows, decidedReducer, decidedText, type CarriedEntry, type CarriedRow, type Decided, type Decision } from "./review";
 import { CARD, MUTED, TITLE } from "./styles";
 
 const ACTION = "h-7 px-2.5 text-xs pointer-coarse:h-11 pointer-coarse:px-3";
-
-const statusLabel = (status: TaskDto["status"]) => COLUMNS.find((c) => c.status === status)?.label ?? status;
 
 type Focus = { id: string; target: "undo" | "action" };
 type Props = { carried: CarriedEntry[] };

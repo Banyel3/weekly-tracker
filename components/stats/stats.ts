@@ -14,11 +14,13 @@ export function percent(finished: number, planned: number): number {
   return planned > 0 ? Math.round((finished / planned) * 100) : 0;
 }
 
-export function paceLine(finished: number, planned: number, today: string): string {
-  if (planned === 0) return "nothing planned yet";
+/** Day of the week for the card header, and a projection once there is a day of data to project from. */
+export function pace(finished: number, planned: number, today: string): { day: string; pace: string | null } {
   const d = isoWeekday(today);
-  if (d === 1) return "day 1 of 7";
-  return `day ${d} of 7 · on pace for ${Math.round((finished / d) * 7)}`;
+  const day = `day ${d} of 7`;
+  if (planned === 0) return { day, pace: "nothing planned yet" };
+  if (d === 1) return { day, pace: null };
+  return { day, pace: `on pace for ${Math.round((finished / d) * 7)}` };
 }
 
 export function perDayBars(perDay: { day: string; finished: number }[], today: string): Bar[] {

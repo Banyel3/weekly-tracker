@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { todayYmd, ymdToDate, type WeekRange } from "@/lib/week";
 import { colorVar } from "../ColorSwatches";
 import type { CardData } from "./dnd";
-import { PriorityFlag } from "./PriorityPills";
+import { PriorityFlag } from "./PriorityFlag";
 
 type Due = { text: string; urgent: boolean };
 
@@ -30,6 +30,9 @@ function dueLabel(dueDate: string, week: WeekRange, today: string): Due {
   return { text: `due ${format(dueDate, inWeek ? "EEE" : "MMM d")}`, urgent: false };
 }
 
+/** Urgent open tasks also show the word "urgent" in the meta row. */
+const urgentShown = (task: TaskDto) => task.priority === "URGENT" && task.status !== "DONE";
+
 type MetaProps = { task: TaskDto; project: ProjectDto | null; week: WeekRange };
 
 function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactNode }) {
@@ -37,7 +40,7 @@ function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactN
   const due = task.dueDate && !done ? dueLabel(task.dueDate, week, todayYmd()) : null;
   const checked = task.checklist.filter((i) => i.done).length;
   const total = task.checklist.length;
-  const urgent = task.priority === "URGENT" && !done;
+  const urgent = urgentShown(task);
   const rolled = task.rolloverCount >= 2;
   const lastWeek = task.rolledBackAt === week.start;
   if (!project && !due && !total && !urgent && !rolled && !lastWeek && !task.note && !action) return null;
@@ -140,7 +143,7 @@ export function TaskCard({ ref, task, project, week, settle, layoutKey, onOpen, 
       {...listeners}
     >
       <div className="flex items-start gap-2">
-        <PriorityFlag priority={task.priority} className="mt-[3px]" />
+        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} className="mt-[3px]" />
         <button
           ref={setActivatorNodeRef}
           {...attributes}
@@ -186,7 +189,7 @@ export function CardPreview({ task, project, week }: MetaProps) {
   return (
     <article className={cn(CARD, "cursor-grabbing border-primary", task.status === "DONE" && "opacity-60")}>
       <div className="flex items-start gap-2">
-        <PriorityFlag priority={task.priority} className="mt-[3px]" />
+        <PriorityFlag priority={task.priority} decorative={urgentShown(task)} className="mt-[3px]" />
         <div className="line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]">
           {task.title}
         </div>

@@ -7,8 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { WIP_LIMIT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { guideLabels } from "./carousel";
-import { COLUMNS } from "./dnd";
-import { statusVar } from "./Column";
+import { COLUMNS, statusVar } from "./status";
 
 export type GuideColumn = { shown: number; total: number };
 

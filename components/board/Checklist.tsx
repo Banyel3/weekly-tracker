@@ -118,7 +118,7 @@ export function Checklist({ items, onChange, disabled }: Props) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label="remove item"
+                  aria-label="Remove item"
                   disabled={disabled}
                   onClick={() => remove(index)}
                   className="size-7 text-muted-foreground hover:text-foreground pointer-coarse:size-11"

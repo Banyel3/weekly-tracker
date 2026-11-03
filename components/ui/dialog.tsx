@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Hint } from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { XIcon } from "lucide-react";
@@ -61,13 +62,15 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="absolute top-4 right-4 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors duration-150 ease-out outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none motion-reduce:transition-none pointer-coarse:size-11"
-          >
-            <Icon icon={XIcon} />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          <Hint label="Close">
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              className="absolute top-4 right-4 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors duration-150 ease-out outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none motion-reduce:transition-none pointer-coarse:size-11"
+            >
+              <Icon icon={XIcon} />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          </Hint>
         )}
       </DialogPrimitive.Content>
     </DialogPortal>

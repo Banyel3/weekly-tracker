@@ -6,10 +6,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { nextColumnFirst } from "./carousel";
-import { COLUMNS, type Status } from "./dnd";
-import { statusVar } from "./Column";
-
-const labelOf = (status: Status) => COLUMNS.find((c) => c.status === status)?.label ?? status;
+import { statusLabel, statusVar, type Status } from "./status";
 
 type Props = {
   task: TaskDto | null;
@@ -53,7 +50,7 @@ export function MoveSheet({ task: next, onMove, onClose, onCloseAutoFocus }: Pro
                   )}
                 >
                   <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: statusVar(status) }} />
-                  {i === 0 ? `Next: ${labelOf(status)}` : labelOf(status)}
+                  {i === 0 ? `Next: ${statusLabel(status)}` : statusLabel(status)}
                   {current && " (current)"}
                 </Button>
               </li>

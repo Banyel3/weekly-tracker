@@ -1,15 +1,8 @@
 import type { Active, Announcements, KeyboardCodes, KeyboardCoordinateGetter, UniqueIdentifier } from "@dnd-kit/core";
-import type { TaskDto } from "@/lib/tasks";
+import { COLUMNS, type Status } from "./status";
 
-export type Status = TaskDto["status"];
+export { COLUMNS, type Status };
 export type CardData = { status: Status; title: string };
-
-export const COLUMNS: { status: Status; label: string }[] = [
-  { status: "BACKLOG", label: "Backlog" },
-  { status: "THIS_WEEK", label: "This week" },
-  { status: "IN_PROGRESS", label: "In progress" },
-  { status: "DONE", label: "Done" },
-];
 
 const STATUSES = COLUMNS.map((c) => c.status);
 const ARROWS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
