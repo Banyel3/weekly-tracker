@@ -2,7 +2,8 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { formatInTimeZone } from "date-fns-tz";
-import { StickyNote } from "lucide-react";
+import { ArrowLeftRight, StickyNote } from "lucide-react";
+import type { ReactNode } from "react";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ function dueLabel(dueDate: string, week: WeekRange, today: string): Due {
 
 type MetaProps = { task: TaskDto; project: ProjectDto | null; week: WeekRange };
 
-function CardMeta({ task, project, week }: MetaProps) {
+function CardMeta({ task, project, week, action }: MetaProps & { action?: ReactNode }) {
   const done = task.status === "DONE";
   const due = task.dueDate && !done ? dueLabel(task.dueDate, week, todayYmd()) : null;
   const checked = task.checklist.filter((i) => i.done).length;
@@ -34,7 +35,7 @@ function CardMeta({ task, project, week }: MetaProps) {
   const urgent = task.priority === "URGENT" && !done;
   const rolled = task.rolloverCount >= 2;
   const lastWeek = task.rolledBackAt === week.start;
-  if (!project && !due && !total && !urgent && !rolled && !lastWeek && !task.note) return null;
+  if (!project && !due && !total && !urgent && !rolled && !lastWeek && !task.note && !action) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs leading-4 text-muted-foreground">
       {project && (
@@ -70,6 +71,7 @@ function CardMeta({ task, project, week }: MetaProps) {
           <span className="sr-only">has note</span>
         </span>
       )}
+      {action}
     </div>
   );
 }
@@ -77,9 +79,9 @@ function CardMeta({ task, project, week }: MetaProps) {
 const CARD =
   "flex flex-none flex-col gap-1 rounded-lg border bg-muted px-2.5 py-2 transition-[border-color,opacity] duration-150 ease-out motion-reduce:transition-none";
 
-type Props = MetaProps & { onOpen: (task: TaskDto) => void };
+type Props = MetaProps & { onOpen: (task: TaskDto) => void; onMove?: (task: TaskDto) => void };
 
-export function TaskCard({ task, project, week, onOpen }: Props) {
+export function TaskCard({ task, project, week, onOpen, onMove }: Props) {
   const pending = task.id.startsWith("tmp-");
   const data: CardData = { status: task.status, title: task.title };
   const { setNodeRef, setActivatorNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -114,7 +116,27 @@ export function TaskCard({ task, project, week, onOpen }: Props) {
           {task.title}
         </button>
       </div>
-      <CardMeta task={task} project={project} week={week} />
+      <CardMeta
+        task={task}
+        project={project}
+        week={week}
+        action={
+          onMove &&
+          !pending && (
+            <button
+              type="button"
+              aria-label="Move"
+              aria-haspopup="dialog"
+              onClick={() => onMove(task)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              className="-my-1 ml-auto grid size-7 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:-my-2.5 pointer-coarse:size-11"
+            >
+              <ArrowLeftRight aria-hidden="true" className="size-4" />
+            </button>
+          )
+        }
+      />
     </article>
   );
 }

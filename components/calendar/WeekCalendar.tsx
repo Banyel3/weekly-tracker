@@ -87,7 +87,7 @@ export function WeekCalendar() {
       id="cal"
       aria-labelledby="cal-heading"
       data-cal-root
-      className="flex flex-none flex-col overflow-hidden rounded-xl border bg-card text-card-foreground"
+      className="flex flex-none flex-col overflow-hidden rounded-xl border bg-card text-card-foreground max-[899px]:scroll-mt-16"
     >
       <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3.5 py-2">
         <h2 id="cal-heading" className="m-0 text-[13px] leading-5 font-semibold">

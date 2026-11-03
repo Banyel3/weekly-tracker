@@ -14,6 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
+import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
 import type { NewTask } from "../useBoard";
@@ -24,6 +25,7 @@ import { useTaskDialog } from "../useTaskDialog";
 import { matchesFilter, useFilters } from "../useFilters";
 import { Column } from "./Column";
 import { MobileBoard } from "./MobileBoard";
+import { MoveSheet } from "./MoveSheet";
 import { COLUMNS, KEYBOARD_CODES, SCREEN_READER_INSTRUCTIONS, announcements, columnCoordinates, type Status } from "./dnd";
 import { SearchField } from "./SearchField";
 import { CardPreview } from "./TaskCard";
@@ -53,6 +55,14 @@ function useBoardSearch() {
   return [q, setQ] as const;
 }
 
+const STILL_PX = 8;
+
+/** A touch long-press that activated the drag but was released in place, over its own column or nothing. */
+function isLongPressWithoutMove(event: Event, delta: { x: number; y: number }, over: Status | undefined, from: Status) {
+  const touch = typeof TouchEvent !== "undefined" && event instanceof TouchEvent;
+  return touch && Math.hypot(delta.x, delta.y) < STILL_PX && (over === undefined || over === from);
+}
+
 export function Board() {
   const board = useBoardContext();
   const { filter } = useFilters();
@@ -62,6 +72,7 @@ export function Board() {
   const { target: dialog, openTask, openCreate, close } = useTaskDialog();
   const [activeId, setActiveId] = useState<string | null>(null);
   const phone = useIsPhone();
+  const [moving, setMoving] = useState<TaskDto | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -83,10 +94,14 @@ export function Board() {
     return board.updateTask(task.id, status === task.status ? rest : body);
   }
 
-  function onDragEnd({ active, over }: DragEndEvent) {
+  function onDragEnd({ active, over, delta, activatorEvent }: DragEndEvent) {
     setActiveId(null);
     const task = tasks.find((t) => t.id === active.id);
     const to = over?.id as Status | undefined;
+    if (task && phone && isLongPressWithoutMove(activatorEvent, delta, to, task.status)) {
+      setMoving(task);
+      return;
+    }
     if (task && to && task.status !== to) {
       haptic();
       board.moveTask(task, to);
@@ -106,6 +121,7 @@ export function Board() {
         loading={board.status === "loading"}
         onOpen={openTask}
         onAdd={openCreate}
+        onMove={phone ? setMoving : undefined}
         className={className}
       />
     );
@@ -171,6 +187,9 @@ export function Board() {
           {active && week && <CardPreview task={active} project={projectOf(active.projectId)} week={week} />}
         </DragOverlay>
       </DndContext>
+      {phone && (
+        <MoveSheet task={moving} onMove={(task, to) => board.moveTask(task, to)} onClose={() => setMoving(null)} />
+      )}
       <TaskDialog
         target={dialog}
         projects={projects}

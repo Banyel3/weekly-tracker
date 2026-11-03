@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ResponsiveDialog, ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ChecklistItem } from "@/lib/checklist";
@@ -150,14 +151,15 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
   const heading = readOnly ? "Archived task" : task ? "Edit task" : "New task";
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={target !== null}
       onOpenChange={(open) => {
         if (!open && !busy) onClose();
       }}
     >
-      <DialogContent
+      <ResponsiveDialogContent
         showCloseButton={false}
+        onDismiss={() => !busy && onClose()}
         aria-describedby={undefined}
         onEscapeKeyDown={(e) => busy && e.preventDefault()}
         onInteractOutside={(e) => busy && e.preventDefault()}
@@ -166,7 +168,8 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
           e.preventDefault();
           requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-undo-button]")?.focus());
         }}
-        className="max-h-[calc(100dvh-2rem)] gap-3.5 overflow-y-auto rounded-lg bg-card p-5 sm:max-w-[440px]"
+        className="gap-3.5 bg-card p-5"
+        dialogClassName="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg sm:max-w-[440px]"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
           <DialogTitle className="text-[15px] leading-5 font-medium">{heading}</DialogTitle>
@@ -296,7 +299,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
             )}
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

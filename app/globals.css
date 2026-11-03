@@ -106,3 +106,8 @@
   *::before,
   *::after { transition: none !important; animation: none !important; }
 }
+
+@keyframes undo-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
