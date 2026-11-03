@@ -14,7 +14,7 @@ export function Hint({ label, side, children }: Props) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side} sideOffset={4}>
+      <TooltipContent side={side} sideOffset={4} className="max-w-64">
         {label}
       </TooltipContent>
     </Tooltip>

@@ -1,6 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { Icon } from "@/components/ui/icon";
 import type { InsightsDto } from "@/lib/insights";
 import { completionLine, droppedLine, trendLabel } from "./review";
 import { CARD, MUTED, TITLE } from "./styles";
@@ -26,9 +30,21 @@ export function TrendCard({ trend, current }: { trend: InsightsDto["trend"]; cur
   return (
     <section aria-labelledby="review-trend" className={CARD}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id="review-trend" className={TITLE}>
-          Planned vs finished
-        </h3>
+        <div className="flex items-center gap-1">
+          <h3 id="review-trend" className={TITLE}>
+            Planned vs finished
+          </h3>
+          <Hint label="Planned counts every task put on a week; finished leaves out ones reopened that week; deleted tasks count only as dropped.">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="How planned and finished are counted"
+              className="size-6 text-muted-foreground hover:text-foreground pointer-coarse:size-11"
+            >
+              <Icon icon={Info} size="sm" />
+            </Button>
+          </Hint>
+        </div>
         <span className="flex gap-3 text-xs leading-4 text-muted-foreground">
           <Key color="var(--chart-2)" label="planned" />
           <Key color="var(--primary)" label="finished" />
@@ -42,7 +58,7 @@ export function TrendCard({ trend, current }: { trend: InsightsDto["trend"]; cur
         {completion && ` · ${completion}`}
         {dropped && ` · ${dropped}`}
       </p>
-      <p className={MUTED}>planned counts every task put on a week; finished leaves out ones reopened that week; deleted tasks count only as dropped</p>
+      <p className={MUTED}>planned = tasks put on a week · finished excludes same-week reopens · deleted shown as dropped</p>
     </section>
   );
 }
