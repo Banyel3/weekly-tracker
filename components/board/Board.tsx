@@ -191,7 +191,7 @@ export function Board() {
         </h2>
         <UndoLine returnFocusTo={SEARCH_ID} />
         <SearchField id={SEARCH_ID} value={q} onChange={setQ} className="ml-auto max-[599px]:w-full" />
-        <Button asChild variant="outline" size="sm" className="text-muted-foreground hover:text-foreground pointer-coarse:h-11">
+        <Button asChild variant="outline" size="sm" className="text-muted-foreground hover:text-foreground max-[899px]:hidden pointer-coarse:h-11">
           <Link href="/archive">
             <Icon icon={Archive} />
             Archive
