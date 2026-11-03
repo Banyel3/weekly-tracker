@@ -2,6 +2,7 @@ import { getState } from "./appState";
 import { prisma } from "./db";
 import { currentWeekStart } from "./week";
 
+/** When a rollover last archived or returned at least one task; empty hourly checks leave it unchanged. */
 export const LAST_ROLLOVER_KEY = "lastRolloverAt";
 
 export type Health = { ok: true; db: true; weekStart: string; lastRolloverAt: string | null };

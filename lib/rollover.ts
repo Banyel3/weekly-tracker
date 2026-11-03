@@ -1,21 +1,42 @@
-import { EventType, Status, type Prisma } from "@prisma/client";
+import { EventType, Status } from "@prisma/client";
 import { setState } from "./appState";
 import { prisma } from "./db";
 import { recordEvents } from "./events";
 import { LAST_ROLLOVER_KEY } from "./health";
 import { currentWeekStart, ymdToDate } from "./week";
 
-export async function rolloverStaleTasks(
-  now: Date = new Date(),
-): Promise<{ archived: number; returnedToBacklog: number }> {
-  const weekStart = ymdToDate(currentWeekStart(now));
+export type RolloverResult = { archived: number; returnedToBacklog: number };
+
+let inFlight: Promise<RolloverResult> | null = null;
+
+/**
+ * The weekly and hourly crons both fire at Monday 00:00, so concurrent callers in this process share one run.
+ * Across processes, FOR UPDATE makes a second transaction wait and then skip the rows the first one changed,
+ * so events are written only for rows this run actually rolled over.
+ */
+export function rolloverStaleTasks(now: Date = new Date()): Promise<RolloverResult> {
+  inFlight ??= runRollover(now).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+type StaleRow = { id: string; status: Status };
+
+async function runRollover(now: Date): Promise<RolloverResult> {
+  const weekStartYmd = currentWeekStart(now);
+  const weekStart = ymdToDate(weekStartYmd);
   const stale = { archived: false, weekOf: { lt: weekStart } };
 
   const [archived, returned] = await prisma.$transaction(async (tx) => {
-    const ids = async (status: Prisma.TaskWhereInput["status"]) =>
-      (await tx.task.findMany({ where: { ...stale, status }, select: { id: true } })).map((t) => t.id);
-    const archiveIds = await ids(Status.DONE);
-    const returnIds = await ids({ not: Status.DONE });
+    const rows = await tx.$queryRaw<StaleRow[]>`
+      SELECT id, status::text AS status FROM "Task"
+      WHERE archived = false AND "weekOf" < ${weekStartYmd}::date
+      FOR UPDATE`;
+    const archiveIds = rows.filter((r) => r.status === Status.DONE).map((r) => r.id);
+    const returnIds = rows.filter((r) => r.status !== Status.DONE).map((r) => r.id);
+    if (rows.length === 0) return [0, 0];
+
     const archivedRows = await tx.task.updateMany({
       where: { ...stale, id: { in: archiveIds }, status: Status.DONE },
       data: { archived: true, rolloverCount: 0 },
@@ -37,10 +58,10 @@ export async function rolloverStaleTasks(
       ],
       now,
     );
-    return [archivedRows, returnedRows];
+    return [archivedRows.count, returnedRows.count];
   });
-  await setState(LAST_ROLLOVER_KEY, now.toISOString());
+  if (archived + returned > 0) await setState(LAST_ROLLOVER_KEY, now.toISOString());
 
-  console.log(`[rollover] archived=${archived.count} backlog=${returned.count}`);
-  return { archived: archived.count, returnedToBacklog: returned.count };
+  console.log(`[rollover] archived=${archived} backlog=${returned}`);
+  return { archived, returnedToBacklog: returned };
 }
