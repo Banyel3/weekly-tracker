@@ -234,7 +234,7 @@ curl -s "${auth[@]}" "$TRACKER_URL/api/agent/tasks?status=this_week,in_progress"
 
 ## A Claude loop
 
-`docs/examples/yumi-loop.mjs` (not part of the build) shows the whole loop in about forty lines: it fetches `/api/agent/tools`, sends the user's message to the Messages API with model `claude-sonnet-5-5` and `tool_choice: auto`, runs every `tool_use` block through `/api/agent/run`, sends all the `tool_result` blocks back in one user message (failed calls with `is_error: true`), and repeats until Claude answers in text. It opts into server-side refusal fallbacks (`fallbacks: "default"`) and stops on a `refusal` stop reason.
+`docs/examples/yumi-loop.mjs` (not part of the build) shows the whole loop in about forty lines: it fetches `/api/agent/tools`, sends the user's message to the Messages API with model `claude-sonnet-5-5` and `tool_choice: auto`, runs every `tool_use` block through `/api/agent/run`, sends all the `tool_result` blocks back in one user message (failed calls with `is_error: true`), and repeats until Claude answers in text.
 
 ```sh
 npm i @anthropic-ai/sdk   # peer dependency, not in package.json

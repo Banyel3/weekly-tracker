@@ -14,17 +14,14 @@ const messages = [{ role: "user", content: process.argv[2] ?? "What is on today?
 const system = "You are Yumi, the owner's weekly-tracker assistant. Dates are Asia/Manila. Be brief.";
 
 for (let turn = 0; turn < 8; turn++) {
-  const response = await client.beta.messages.create({
+  const response = await client.messages.create({
     model: "claude-sonnet-5-5",
     max_tokens: 16000,
     system,
     tools,
     tool_choice: { type: "auto" },
     messages,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default", // a declined request is retried server-side on a fallback model
   });
-  if (response.stop_reason === "refusal") throw new Error("Claude declined this request");
   messages.push({ role: "assistant", content: response.content });
   const calls = response.content.filter((block) => block.type === "tool_use");
   if (calls.length === 0) {
