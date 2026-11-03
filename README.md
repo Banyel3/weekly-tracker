@@ -18,13 +18,15 @@ Tasks are stored in the named Docker volume `pgdata`. The data survives `docker 
 
 ## Telegram reminders (optional)
 
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`. When both are set, the app sends a message every day at 09:00 Asia/Manila time listing the tasks due that day, and a week summary every Friday at 18:00. If nothing is due, no reminder is sent. When either variable is empty, Telegram messages are disabled.
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`. When both are set, the app sends a morning digest every day at 09:00 Asia/Manila time and a week summary every Friday at 18:00. When either variable is empty, Telegram messages are disabled.
+
+The morning digest opens with the date and the day of the week (`day 3 of 7`), then lists open tasks by due date in four sections: **Overdue** (with how many days late), **Due today**, **Due tomorrow** and **Later this week** (with the weekday). Due dates count in every column, Backlog included. Each task shows its project when it has one; each section lists at most 10 tasks and then `… and N more`. A last line gives the In progress count against the WIP limit, how many tasks are open this week, and how many were carried from last week. On a quiet day, when nothing is overdue or due today or tomorrow, the digest says `Nothing due today · N open this week` and still shows the rest of the week; on an empty week it says `Nothing planned this week. Easy day.` A digest is sent every day, quiet or not.
 
 ## How the week works
 
 A week is the ISO week, Monday to Sunday, in the Asia/Manila timezone. Rollover runs every Monday at 00:00 Asia/Manila, again every hour as an idempotent check, and once each time the server starts, so a machine that slept through Monday midnight still rolls over. At rollover, tasks from a past week that are Done are archived and leave the board; all other unfinished tasks from a past week move back to Backlog.
 
-With Telegram configured, a summary of the week is sent every Friday at 18:00. If the server was off at 09:00 or at Friday 18:00, the missed reminder or summary is sent once when it starts again later that day.
+With Telegram configured, a summary of the week is sent every Friday at 18:00. If the server was off at 09:00 or at Friday 18:00, the missed digest or summary is sent once when it starts again later that day.
 
 ## Run on a laptop over Tailscale
 

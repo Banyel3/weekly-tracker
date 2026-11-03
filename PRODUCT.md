@@ -18,7 +18,7 @@ Around the board sits a small workspace, reached from the sidebar on a laptop an
 
 ## Rituals
 
-The product is built around three recurring moments:
+The product is built around three recurring moments, with a morning digest at 09:00 (if Telegram is configured) that lists what is overdue, due today, due tomorrow and later this week:
 
 1. **Monday rollover.** At 00:00 Asia/Manila every Monday the board resets itself: finished work is archived, unfinished work returns to Backlog marked `last week`, and the sidebar says how many came back. Tasks carried twice or more get a nudge.
 2. **Friday summary.** At 18:00 every Friday, if Telegram is configured, one message states what was finished of what was planned, per project, and what keeps getting carried over.
