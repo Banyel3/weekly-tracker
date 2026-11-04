@@ -1,0 +1,9 @@
+# User unit: ~/.config/systemd/user/weekly-tracker-backup.service (run by the timer)
+[Unit]
+Description=Weekly tracker database backup
+After=weekly-tracker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/weekly-tracker
+ExecStart=%h/weekly-tracker/scripts/backup.sh

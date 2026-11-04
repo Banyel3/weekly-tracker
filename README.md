@@ -22,6 +22,19 @@ Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`. When both are set, th
 
 The morning digest opens with the date and the day of the week (`day 3 of 7`), then lists open tasks by due date in four sections: **Overdue** (with how many days late), **Due today**, **Due tomorrow** and **Later this week** (with the weekday). Due dates count in every column, Backlog included. Each task shows its project when it has one; each section lists at most 10 tasks and then `… and N more`. A last line gives the In progress count against the WIP limit, how many tasks are open this week, and how many were carried from last week. On a quiet day, when nothing is overdue or due today or tomorrow, the digest says `Nothing due today · N open this week` and still shows the rest of the week; on an empty week it says `Nothing planned this week. Easy day.` A digest is sent every day, quiet or not.
 
+## Server deployment (Ubuntu, no sudo)
+
+The stack runs as a normal user on the laptop server and starts at boot through user-level systemd units in `deploy/`.
+
+```sh
+git clone https://github.com/Banyel3/weekly-tracker.git ~/weekly-tracker   # plus .env (chmod 600)
+mkdir -p ~/.docker/cli-plugins && curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose && chmod +x ~/.docker/cli-plugins/docker-compose
+bash ~/weekly-tracker/deploy/install-systemd.sh        # enables weekly-tracker.service and the nightly backup timer
+tailscale serve --bg --https=8443 3000                 # tailnet-only HTTPS; keep Funnel off for this port
+```
+
+Then open `https://<server>.<tailnet>.ts.net:8443`. Requirements: the user is in the `docker` group and `loginctl enable-linger <user>` has been run once (needs sudo). Updates: `git pull && docker compose up -d --build`. Backups land in `backups/` (timer at 03:30, `BACKUP_KEEP_DAYS` from `.env`); restore with `scripts/restore.sh`.
+
 ## Agent API (optional)
 
 Set `AGENT_API_TOKEN` in `.env` (generate one with `openssl rand -hex 32`) to let an AI agent operate the tracker over HTTP with `Authorization: Bearer <token>`.

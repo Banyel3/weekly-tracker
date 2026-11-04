@@ -1,0 +1,11 @@
+# User unit: ~/.config/systemd/user/weekly-tracker-backup.timer
+[Unit]
+Description=Nightly weekly tracker backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

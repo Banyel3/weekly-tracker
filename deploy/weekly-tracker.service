@@ -1,0 +1,19 @@
+# User unit: ~/.config/systemd/user/weekly-tracker.service
+# Starts the compose stack at boot (needs `loginctl enable-linger <user>` and docker group membership; no sudo).
+[Unit]
+Description=Weekly tracker (docker compose stack)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/weekly-tracker
+# The user manager cannot order against the system docker.service, so wait for the daemon.
+ExecStartPre=/bin/sh -c 'until docker info >/dev/null 2>&1; do sleep 2; done'
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=600
+
+[Install]
+WantedBy=default.target
