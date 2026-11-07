@@ -95,7 +95,7 @@ Today's briefing. Input: none.
 }
 ```
 
-`digest` is the same text as the 09:00 Telegram digest; the four lists hold the tasks it names (open tasks in any column, sorted by due date, then priority, then age). `dayIndex` counts Monday as 1.
+`digest` is the same text as the 09:00 Telegram digest; the four lists hold the tasks it names (open tasks in any column, sorted by due date, then priority, then age). `dayIndex` counts Monday as 1. Undated Backlog tasks are not included; to find a task by title use list_tasks with query.
 
 ### 2. `get_board`
 
@@ -127,7 +127,7 @@ Result: `{ "task": TaskDto, "events": [{ "type": "PLANNED", "at": "2026-11-04T02
   "status": "this_week", "project": "Work", "checklist": ["QA", "Deploy"] }
 ```
 
-Only `title` is required. `status` defaults to `backlog`; any other column plans the task into the current week, and `done` records the completion time. `checklist` takes up to 20 item texts. Result: `{ "task": TaskDto }`.
+Only `title` is required. `status` defaults to `backlog`; any other column plans the task into the current week, and `done` records the completion time. `checklist` takes up to 20 item texts. Result: `{ "task": TaskDto }`. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
 
 ### 6. `update_task`
 
@@ -135,7 +135,7 @@ Only `title` is required. `status` defaults to `backlog`; any other column plans
 { "id": "cmh3k2t0x0001", "title": "Ship v2.1", "due": null, "project": null, "checklist": ["QA", "Deploy", "Announce"] }
 ```
 
-Only the fields passed change. `null` clears `note`, `due` or `project`. `checklist` replaces the list; items whose text is unchanged keep their ticked state. Change the column with `move_task`. Errors: only `id` passed (400), unknown id (404). Result: `{ "task": TaskDto }`.
+Only the fields passed change. `null` clears `note`, `due` or `project`. `checklist` replaces the list; items whose text is unchanged keep their ticked state. Change the column with `move_task`. Errors: only `id` passed (400), unknown id (404). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
 
 ### 7. `move_task`
 
@@ -143,7 +143,7 @@ Only the fields passed change. `null` clears `note`, `due` or `project`. `checkl
 { "id": "cmh3k2t0x0001", "status": "done" }
 ```
 
-`this_week`, `in_progress` and `done` plan the task into the current week; `done` sets `completedAt`; `backlog` unplans it. An archived task must be restored first (400 `restore the task before changing its status`). Result: `{ "task": TaskDto }`.
+`this_week`, `in_progress` and `done` plan the task into the current week; `done` sets `completedAt`; `backlog` unplans it. An archived task must be restored first (400 `restore the task before changing its status`). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.
 
 ### 8. `snooze_task`
 
@@ -152,7 +152,7 @@ Only the fields passed change. `null` clears `note`, `due` or `project`. `checkl
 { "id": "cmh3k2t0x0001", "until": "2026-11-10" }
 ```
 
-With `until`, the due date becomes that day; `until` before today is rejected (400). Otherwise the due date moves `days` ahead (1–60, default 1) from the later of today and the current due date, so a task that was due last Friday and is snoozed by 2 on Wednesday lands on Friday this week. Passing both is a 400. Result: `{ "task": TaskDto }`.
+With `until`, the due date becomes that day; `until` before today is rejected (400). Otherwise the due date moves `days` ahead (1–60, default 1) from the later of today and the current due date, so a task that was due last Friday and is snoozed by 2 on Wednesday lands on Friday this week. Passing both is a 400. Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
 
 ### 9. `delete_task`
 
@@ -160,7 +160,7 @@ With `until`, the due date becomes that day; `until` before today is rejected (4
 { "id": "cmh3k2t0x0001" }
 ```
 
-Deletes permanently; the history stays for the weekly stats. Result: `{ "deleted": true }`. Unknown id: 404. To finish a task, prefer `move_task` with `done`.
+Deletes permanently; the history stays for the weekly stats. Result: `{ "deleted": true }`. Unknown id: 404. To finish a task, prefer `move_task` with `done`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.
 
 ### 10. `restore_task`
 
@@ -168,7 +168,7 @@ Deletes permanently; the history stays for the weekly stats. Result: `{ "deleted
 { "id": "cmh3k2t0x0001", "status": "this_week" }
 ```
 
-Brings an archived task back, into `backlog` by default or into `status`. A live task is a 400 (`task is not archived`). Result: `{ "task": TaskDto }`.
+Brings an archived task back, into `backlog` by default or into `status`. A live task is a 400 (`task is not archived`). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.
 
 ### 11. `get_review`
 

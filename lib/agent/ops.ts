@@ -162,7 +162,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "get_today",
     description:
-      "Today's briefing (Asia/Manila): date, weekday, the morning digest text, and the open tasks that are overdue, due today, due tomorrow or due later this week, plus in-progress count against the WIP limit and how many tasks are open or carried this week. Call this first when asked what is on today.",
+      "Today's briefing (Asia/Manila): date, weekday, the morning digest text, and the open tasks that are overdue, due today, due tomorrow or due later this week, plus in-progress count against the WIP limit and how many tasks are open or carried this week. Call this first when asked what is on today. Undated Backlog tasks are not included; to find a task by title use list_tasks with query.",
     input_schema: objectSchema(),
     schema: empty,
     run: (_input, now) => getToday(now),
@@ -255,7 +255,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "create_task",
     description:
-      "Create a task. Status defaults to backlog; this_week, in_progress or done plan it into the current week. A project name that does not exist yet is created with the next free colour.",
+      "Create a task. Status defaults to backlog; this_week, in_progress or done plan it into the current week. A project name that does not exist yet is created with the next free colour. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.",
     input_schema: objectSchema(
       {
         title: { type: "string", minLength: 1, maxLength: 200, description: "Task title" },
@@ -299,7 +299,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "update_task",
     description:
-      "Edit a task's fields. Only the fields you pass change; null clears note, due or project. checklist replaces the whole list (items whose text is unchanged keep their ticked state). Use move_task to change the column.",
+      "Edit a task's fields. Only the fields you pass change; null clears note, due or project. checklist replaces the whole list (items whose text is unchanged keep their ticked state). Use move_task to change the column. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.",
     input_schema: objectSchema(
       {
         id: idProp,
@@ -349,7 +349,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "move_task",
     description:
-      "Move a task to another column. this_week, in_progress and done plan it into the current week; done records the completion time; backlog unplans it. Archived tasks must be restored first (restore_task).",
+      "Move a task to another column. this_week, in_progress and done plan it into the current week; done records the completion time; backlog unplans it. Archived tasks must be restored first (restore_task). Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.",
     input_schema: objectSchema({ id: idProp, status: statusProp }, ["id", "status"]),
     schema: () => z.object({ id: idInput, status: statusInput }).strict(),
     run: async ({ id, status }) => {
@@ -360,7 +360,7 @@ const TOOLS: ToolSpec[] = [
   }),
   tool({
     name: "snooze_task",
-    description: `Push a task's due date. With until, the due date becomes that day. Otherwise it moves days ahead (default 1, at most ${SNOOZE_DAYS_MAX}) from the later of today and the current due date, so an overdue task lands days after today. Pass days or until, not both; until must not be before today.`,
+    description: `Push a task's due date. With until, the due date becomes that day. Otherwise it moves days ahead (default 1, at most ${SNOOZE_DAYS_MAX}) from the later of today and the current due date, so an overdue task lands days after today. Pass days or until, not both; until must not be before today. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.`,
     input_schema: objectSchema(
       {
         id: idProp,
@@ -391,7 +391,7 @@ const TOOLS: ToolSpec[] = [
   }),
   tool({
     name: "delete_task",
-    description: "Delete a task permanently. Its history stays for the weekly stats. Prefer move_task to done for finished work.",
+    description: "Delete a task permanently. Its history stays for the weekly stats. Prefer move_task to done for finished work. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.",
     input_schema: objectSchema({ id: idProp }, ["id"]),
     schema: () => z.object({ id: idInput }).strict(),
     run: async ({ id }) => {
@@ -401,7 +401,7 @@ const TOOLS: ToolSpec[] = [
   }),
   tool({
     name: "restore_task",
-    description: "Bring an archived task back onto the board, into backlog by default or into the column you pass.",
+    description: "Bring an archived task back onto the board, into backlog by default or into the column you pass. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.",
     input_schema: objectSchema({ id: idProp, status: { ...statusProp, description: "Column to restore into (default backlog)" } }, ["id"]),
     schema: () => z.object({ id: idInput, status: statusInput.optional() }).strict(),
     run: async ({ id, status }) => {
