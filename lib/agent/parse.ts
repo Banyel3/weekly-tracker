@@ -3,11 +3,12 @@ import { z, type ZodError } from "zod";
 import { dateToYmd, shiftYmd, todayYmd, ymdToDate } from "../week";
 
 /** Agent-facing names: lower snake case, matched case-insensitively ("In Progress" and "in-progress" work too). */
-export const STATUS_NAMES = ["backlog", "this_week", "in_progress", "done"] as const;
+export const STATUS_NAMES = ["backlog", "future", "this_week", "in_progress", "done"] as const;
 export const PRIORITY_NAMES = ["none", "high", "urgent"] as const;
 
 const STATUS_BY_NAME: Record<(typeof STATUS_NAMES)[number], Status> = {
   backlog: Status.BACKLOG,
+  future: Status.FUTURE,
   this_week: Status.THIS_WEEK,
   in_progress: Status.IN_PROGRESS,
   done: Status.DONE,

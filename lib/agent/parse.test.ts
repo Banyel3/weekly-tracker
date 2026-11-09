@@ -13,6 +13,8 @@ describe("statusInput", () => {
     ["In Progress", "IN_PROGRESS"],
     ["in-progress", "IN_PROGRESS"],
     [" Done ", "DONE"],
+    ["future", "FUTURE"],
+    ["Future", "FUTURE"],
   ])("maps %j to %s", (input, expected) => {
     expect(statusInput.parse(input)).toBe(expected);
   });
@@ -20,7 +22,7 @@ describe("statusInput", () => {
   it("rejects an unknown name with the allowed list", () => {
     const result = statusInput.safeParse("doing");
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0].message).toBe("status must be one of backlog, this_week, in_progress, done");
+    expect(result.error?.issues[0].message).toBe("status must be one of backlog, future, this_week, in_progress, done");
   });
 });
 
