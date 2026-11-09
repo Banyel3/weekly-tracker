@@ -96,6 +96,14 @@ describe("buildReview", () => {
     expect(r.lastWeek.carried).toBe(2);
   });
 
+  it("leaves Future tasks out of planned, overdue and carried, even when overdue by date", () => {
+    const future = task({ status: "FUTURE", dueDate: "2026-10-01" });
+    const r = buildReview(NOW, { tasks: [future], projects, carriedIds: [future.id] });
+    expect(r.thisWeek).toMatchObject({ planned: 0, finished: 0, overdue: 0 });
+    expect(r.carried).toEqual([]);
+    expect(r.lastWeek).toMatchObject({ planned: 0, carried: 0 });
+  });
+
   it("ignores rolledBackAt without a ROLLED_BACK event for this Monday", () => {
     const r = buildReview(NOW, { tasks: [task({ rolledBackAt: THIS })], projects, carriedIds: [] });
     expect(r.carried).toEqual([]);
