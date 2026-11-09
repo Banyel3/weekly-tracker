@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMorningDigest, type DigestData, type DigestTask } from "./digestText";
+import { buildMorningDigest, digestSections, type DigestData, type DigestTask } from "./digestText";
 import { shiftYmd, type WeekRange } from "./week";
 
 // ISO week of Mon 2026-11-02 .. Sun 2026-11-08.
@@ -149,5 +149,14 @@ describe("buildMorningDigest", () => {
     expect(text.length).toBeLessThanOrEqual(4096);
     for (const heading of ["Overdue", "Due today", "Due tomorrow", "Later this week"]) expect(text).toContain(heading);
     expect(text).toMatch(/… and \d+ more$/m);
+  });
+});
+
+describe("digestSections with Future tasks", () => {
+  it("lists a Future task due tomorrow under due tomorrow, across the week boundary", () => {
+    const future = task("Plan the sprint", "2026-11-09", { status: "FUTURE" });
+    const sections = digestSections(data("2026-11-08", [future]));
+    expect(sections.dueTomorrow.map((t) => t.id)).toEqual([future.id]);
+    expect(buildMorningDigest(data("2026-11-08", [future], { openThisWeek: 0 }))).toContain("Due tomorrow\n• Plan the sprint");
   });
 });

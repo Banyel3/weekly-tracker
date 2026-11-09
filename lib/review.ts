@@ -62,11 +62,13 @@ function completedDay(task: TaskDto): string | null {
   return task.completedAt ? formatInTimeZone(new Date(task.completedAt), TIMEZONE, "yyyy-MM-dd") : null;
 }
 
-export function buildReview(now: Date, { tasks, projects, carriedIds }: ReviewData): ReviewBase {
+export function buildReview(now: Date, { tasks: all, projects, carriedIds }: ReviewData): ReviewBase {
   const week = weekRange(now);
   const today = todayYmd(now);
   const lastStart = shiftYmd(week.start, -7);
   const isDone = (t: TaskDto) => t.status === Status.DONE;
+  // Future tasks are not part of any week yet: they count as neither planned, overdue nor carried.
+  const tasks = all.filter((t) => t.status !== Status.FUTURE);
 
   const planned = tasks.filter((t) => t.weekOf === week.start);
   const carriedSet = new Set(carriedIds);

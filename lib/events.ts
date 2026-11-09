@@ -23,13 +23,16 @@ export async function recordEvents(tx: EventWriter, events: EventInput[], now: D
   await tx.taskEvent.createMany({ data: eventRows(events, now) });
 }
 
+/** Backlog and Future sit outside the week: moving between them plans nothing. */
+const unplanned = (status: Status | null) => status === null || status === Status.BACKLOG || status === Status.FUTURE;
+
 /** `previous` is null for a new task. One move can emit several events, e.g. BACKLOG → DONE is PLANNED + DONE. */
 export function statusEvents(previous: Status | null, next: Status): EventType[] {
   if (previous === next) return [];
   const types: EventType[] = [];
-  if ((previous === null || previous === Status.BACKLOG) && next !== Status.BACKLOG) types.push(EventType.PLANNED);
+  if (unplanned(previous) && !unplanned(next)) types.push(EventType.PLANNED);
   if (previous === Status.DONE) types.push(EventType.REOPENED);
-  if (previous !== null && previous !== Status.BACKLOG && next === Status.BACKLOG) types.push(EventType.UNPLANNED);
+  if (!unplanned(previous) && unplanned(next)) types.push(EventType.UNPLANNED);
   if (next === Status.IN_PROGRESS) types.push(EventType.STARTED);
   if (next === Status.DONE) types.push(EventType.DONE);
   return types;

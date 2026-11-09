@@ -43,6 +43,15 @@ describe("statusEvents", () => {
     ["DONE", "THIS_WEEK", ["REOPENED"]],
     ["DONE", "BACKLOG", ["REOPENED", "UNPLANNED"]],
     ["DONE", "DONE", []],
+    [null, "FUTURE", []],
+    ["BACKLOG", "FUTURE", []],
+    ["FUTURE", "BACKLOG", []],
+    ["FUTURE", "THIS_WEEK", ["PLANNED"]],
+    ["FUTURE", "IN_PROGRESS", ["PLANNED", "STARTED"]],
+    ["FUTURE", "DONE", ["PLANNED", "DONE"]],
+    ["THIS_WEEK", "FUTURE", ["UNPLANNED"]],
+    ["IN_PROGRESS", "FUTURE", ["UNPLANNED"]],
+    ["DONE", "FUTURE", ["REOPENED", "UNPLANNED"]],
   ];
   it.each(table)("%s → %s emits %j", (from, to, types) => {
     expect(statusEvents(from, to)).toEqual(types);

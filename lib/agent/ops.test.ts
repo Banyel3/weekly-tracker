@@ -206,6 +206,14 @@ describe("get_board", () => {
     expect(board.week).toEqual({ start: "2026-11-02", end: "2026-11-08" });
     expect(board.projects).toEqual([{ id: "p1", name: "Work", color: "sky" }]);
     expect(board.tasks.map((t: any) => t.id)).toEqual(["t1"]);
+    expect(board.future).toEqual([]);
+  });
+
+  it("lists Future tasks apart from the columns", async () => {
+    prisma.task.findMany.mockResolvedValue([row(), row({ id: "later", status: "FUTURE", weekOf: null })] as never);
+    const board = await ok("get_board");
+    expect(board.tasks.map((t: any) => t.id)).toEqual(["t1"]);
+    expect(board.future.map((t: any) => t.id)).toEqual(["later"]);
   });
 
   it("rejects input keys", async () => {
@@ -245,6 +253,11 @@ describe("list_tasks", () => {
     expect(AGENT_TOOLS.find((t) => t.name === "list_tasks")!.description).toContain("soonest-due");
   });
 
+  it("filters to Future tasks only", async () => {
+    await ok("list_tasks", { status: "future" });
+    expect((prisma.task.findMany.mock.calls[0] as any)[0].where.status).toEqual({ in: ["FUTURE"] });
+  });
+
   it("accepts a comma-separated status string", async () => {
     await ok("list_tasks", { status: "backlog,in_progress" });
     expect((prisma.task.findMany.mock.calls[0] as any)[0].where.status).toEqual({ in: ["BACKLOG", "IN_PROGRESS"] });
@@ -266,7 +279,7 @@ describe("list_tasks", () => {
   });
 
   it("rejects a bad status string", async () => {
-    await fails("list_tasks", { status: ["doing"] }, 400, "status.0: status must be one of backlog, this_week, in_progress, done");
+    await fails("list_tasks", { status: ["doing"] }, 400, "status.0: status must be one of backlog, future, this_week, in_progress, done");
   });
 
   it("rejects an inverted due range", async () => {
@@ -323,6 +336,12 @@ describe("create_task", () => {
     expect(prisma.project.create).toHaveBeenCalledWith({ data: { name: "Work", color: "amber" } });
     expect(task.projectId).toBe("p2");
     expect(eventTypes()).toEqual(["CREATED", "PLANNED"]);
+  });
+
+  it("creates an undated task in Future", async () => {
+    const { task } = await ok("create_task", { title: "Renew the lease", status: "future" });
+    expect(task).toMatchObject({ status: "FUTURE", weekOf: null });
+    expect(eventTypes()).toEqual(["CREATED"]);
   });
 
   it("requires a title", async () => {
@@ -395,6 +414,13 @@ describe("move_task", () => {
     expect(task.status).toBe("DONE");
     expect(task.completedAt).not.toBeNull();
     expect(eventTypes()).toEqual(["DONE"]);
+  });
+
+  it("moves a task to Future, unplanning it", async () => {
+    withTask(row({ status: "THIS_WEEK" }));
+    const { task } = await ok("move_task", { id: "t1", status: "future" });
+    expect(task).toMatchObject({ status: "FUTURE", weekOf: null });
+    expect(eventTypes()).toEqual(["UNPLANNED"]);
   });
 
   it("rejects a bad status string", async () => {
@@ -479,10 +505,17 @@ describe("restore_task", () => {
   });
 
   it("restores then moves into the requested column", async () => {
-    withTask(row({ archived: true, status: "DONE" }));
-    const { task } = await ok("restore_task", { id: "t1", status: "this_week" });
-    expect(task).toMatchObject({ archived: false, status: "THIS_WEEK", weekOf: "2026-11-02" });
-    expect(eventTypes()).toEqual(["RESTORED", "PLANNED"]);
+    // Writes read the real clock for weekOf, so pin it to NOW's week.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    try {
+      withTask(row({ archived: true, status: "DONE" }));
+      const { task } = await ok("restore_task", { id: "t1", status: "this_week" });
+      expect(task).toMatchObject({ archived: false, status: "THIS_WEEK", weekOf: "2026-11-02" });
+      expect(eventTypes()).toEqual(["RESTORED", "PLANNED"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects a live task", async () => {

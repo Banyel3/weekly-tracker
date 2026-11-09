@@ -27,7 +27,8 @@ The token is compared in constant time. It protects only `/api/agent/**`. The bo
 ## Conventions
 
 - **Dates** are `YYYY-MM-DD` in Asia/Manila. Inputs also accept `today` and `tomorrow`. Impossible days such as `2026-02-30` are rejected.
-- **Status** inputs are `backlog`, `this_week`, `in_progress`, `done`, case-insensitive (`In Progress` and `in-progress` work). Outputs use the board's enum (`BACKLOG`, `THIS_WEEK`, `IN_PROGRESS`, `DONE`).
+- **Status** inputs are `backlog`, `future`, `this_week`, `in_progress`, `done`, case-insensitive (`In Progress` and `in-progress` work). Outputs use the board's enum (`BACKLOG`, `FUTURE`, `THIS_WEEK`, `IN_PROGRESS`, `DONE`).
+- **Future** parks a task for a later week, off the four columns. A Future task due on or before this week's Sunday (overdue included) is saved as `THIS_WEEK` instead, on create, on a move to `future`, and when its due date changes; the hourly rollover moves the rest into This week when their week arrives, recording `PLANNED`. Future tasks count as neither planned, overdue nor carried in the review.
 - **Priority** inputs are `none`, `high`, `urgent`; outputs are `NONE`, `HIGH`, `URGENT`.
 - **Projects** are referred to by name, case-insensitive. `create_task` and `update_task` create a missing project with the next unused colour; `list_tasks` never creates one.
 - **Unknown keys are errors.** A misspelled field (`dueDate` instead of `due`) returns 400 rather than being ignored.
@@ -99,7 +100,7 @@ Today's briefing. Input: none.
 
 ### 2. `get_board`
 
-The board for the current week. Input: none. Result: `{ week, today, projects, tasks, counts: { live, archived, nudges }, carriedIds }`: every Backlog task plus this week's This week, In progress and Done tasks, sorted per column like the board.
+The board for the current week. Input: none. Result: `{ week, today, projects, tasks, counts: { live, archived, nudges }, carriedIds, future }`: `tasks` holds every Backlog task plus this week's This week, In progress and Done tasks, sorted per column like the board; `future` holds the live Future tasks, sorted the same way, and never appears in `tasks`.
 
 ### 3. `list_tasks`
 
@@ -127,7 +128,7 @@ Result: `{ "task": TaskDto, "events": [{ "type": "PLANNED", "at": "2026-11-04T02
   "status": "this_week", "project": "Work", "checklist": ["QA", "Deploy"] }
 ```
 
-Only `title` is required. `status` defaults to `backlog`; any other column plans the task into the current week, and `done` records the completion time. `checklist` takes up to 20 item texts. Result: `{ "task": TaskDto }`. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
+Only `title` is required. `status` defaults to `backlog`; `future` parks it for a later week (planned into This week instead when due by this Sunday); any other column plans the task into the current week, and `done` records the completion time. `checklist` takes up to 20 item texts. Result: `{ "task": TaskDto }`. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
 
 ### 6. `update_task`
 
@@ -135,7 +136,7 @@ Only `title` is required. `status` defaults to `backlog`; any other column plans
 { "id": "cmh3k2t0x0001", "title": "Ship v2.1", "due": null, "project": null, "checklist": ["QA", "Deploy", "Announce"] }
 ```
 
-Only the fields passed change. `null` clears `note`, `due` or `project`. `checklist` replaces the list; items whose text is unchanged keep their ticked state. Change the column with `move_task`. Errors: only `id` passed (400), unknown id (404). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
+Only the fields passed change. `null` clears `note`, `due` or `project`. `checklist` replaces the list; items whose text is unchanged keep their ticked state. Change the column with `move_task`. Moving a Future task's due date to this week or earlier plans it into This week. Errors: only `id` passed (400), unknown id (404). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.
 
 ### 7. `move_task`
 
@@ -143,7 +144,7 @@ Only the fields passed change. `null` clears `note`, `due` or `project`. `checkl
 { "id": "cmh3k2t0x0001", "status": "done" }
 ```
 
-`this_week`, `in_progress` and `done` plan the task into the current week; `done` sets `completedAt`; `backlog` unplans it. An archived task must be restored first (400 `restore the task before changing its status`). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.
+`this_week`, `in_progress` and `done` plan the task into the current week; `done` sets `completedAt`; `backlog` unplans it; `future` unplans it for a later week, unless it is due by this Sunday, in which case it lands in This week. An archived task must be restored first (400 `restore the task before changing its status`). Result: `{ "task": TaskDto }`. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.
 
 ### 8. `snooze_task`
 

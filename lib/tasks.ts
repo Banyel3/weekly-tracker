@@ -71,7 +71,12 @@ export function toDto(task: Task): TaskDto {
 }
 
 export function weekOfFor(status: Status, now?: Date): Date | null {
-  return status === Status.BACKLOG ? null : ymdToDate(currentWeekStart(now));
+  return status === Status.BACKLOG || status === Status.FUTURE ? null : ymdToDate(currentWeekStart(now));
+}
+
+/** A Future task due on or before this week's Sunday (overdue included) belongs in This week. */
+function promoted(status: Status, dueDate: string | null | undefined, now: Date): Status {
+  return status === Status.FUTURE && dueDate != null && dueDate <= weekRange(now).end ? Status.THIS_WEEK : status;
 }
 
 function optionalDate(value: string | null | undefined): Date | null | undefined {
@@ -108,6 +113,8 @@ export type BoardDto = {
   counts: BoardCounts;
   /** Tasks the rollover returned to Backlog this Monday (from ROLLED_BACK events, so re-planning keeps them). */
   carriedIds: string[];
+  /** Live Future tasks, kept out of `tasks` so the four columns never show them. */
+  future: TaskDto[];
 };
 
 export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
@@ -115,7 +122,10 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
   const [projects, tasks, live, archived, nudges, carryEvents] = await Promise.all([
     listProjects(),
     prisma.task.findMany({
-      where: { archived: false, OR: [{ status: Status.BACKLOG }, { weekOf: ymdToDate(week.start) }] },
+      where: {
+        archived: false,
+        OR: [{ status: { in: [Status.BACKLOG, Status.FUTURE] } }, { weekOf: ymdToDate(week.start) }],
+      },
       orderBy: { createdAt: "asc" },
     }),
     prisma.task.count({ where: { archived: false } }),
@@ -127,7 +137,11 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
     }),
   ]);
   const dtos = tasks.map(toDto);
-  const sorted = Object.values(Status).flatMap((status) =>
+  const future = sortColumn(
+    dtos.filter((t) => t.status === Status.FUTURE),
+    week.start,
+  );
+  const sorted = Object.values(Status).filter((status) => status !== Status.FUTURE).flatMap((status) =>
     sortColumn(
       dtos.filter((t) => t.status === status),
       week.start,
@@ -137,7 +151,7 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
     carryEvents.map((e) => ({ ...e, at: e.at.toISOString(), weekOf: week.start })),
     week.start,
   );
-  return { week, today: todayYmd(now), projects, tasks: sorted, counts: { live, archived, nudges }, carriedIds };
+  return { week, today: todayYmd(now), projects, tasks: sorted, counts: { live, archived, nudges }, carriedIds, future };
 }
 
 function completedAtFor(status: Status, previous: Task | null, now: Date): Date | null {
@@ -147,21 +161,22 @@ function completedAtFor(status: Status, previous: Task | null, now: Date): Date 
 
 export async function createTask(input: CreateTaskInput): Promise<TaskDto> {
   const now = new Date();
+  const status = promoted(input.status, input.dueDate, now);
   const task = await prisma.$transaction(async (tx) => {
     const created = await tx.task.create({
       data: {
         title: input.title,
         note: input.note ?? null,
         dueDate: optionalDate(input.dueDate) ?? null,
-        status: input.status,
-        weekOf: weekOfFor(input.status, now),
+        status,
+        weekOf: weekOfFor(status, now),
         projectId: input.projectId ?? null,
         priority: input.priority,
         checklist: normalizeChecklist(input.checklist),
-        completedAt: completedAtFor(input.status, null, now),
+        completedAt: completedAtFor(status, null, now),
       },
     });
-    await recordEvents(tx, withTask(created.id, createEvents(input.status)), now);
+    await recordEvents(tx, withTask(created.id, createEvents(status)), now);
     return created;
   });
   return toDto(task);
@@ -212,6 +227,15 @@ function needsRestoreFirst(input: UpdateTaskInput, existing: Task): boolean {
   return existing.archived && input.status !== undefined && input.archived !== false;
 }
 
+/** A patch that moves a task to Future, or reschedules a Future task, plans it instead when it is due by this Sunday. */
+function withPromotion(input: UpdateTaskInput, existing: Task, now: Date): UpdateTaskInput {
+  const status = input.status ?? existing.status;
+  if (existing.archived || status !== Status.FUTURE || (input.status === undefined && input.dueDate === undefined)) return input;
+  const dueDate = input.dueDate !== undefined ? input.dueDate : existing.dueDate && dateToYmd(existing.dueDate);
+  const next = promoted(status, dueDate, now);
+  return next === status ? input : { ...input, status: next };
+}
+
 /** existing is read inside the transaction so the events and completedAt follow the row the update replaces. */
 export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskDto | null> {
   const now = new Date();
@@ -219,8 +243,9 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     const existing = await tx.task.findUnique({ where: { id } });
     if (!existing) return null;
     if (needsRestoreFirst(input, existing)) throw new RestoreFirstError();
-    const updated = await tx.task.update({ where: { id }, data: updateData(input, existing, now) });
-    await recordEvents(tx, withTask(id, updateEvents(input, existing)), now);
+    const patch = withPromotion(input, existing, now);
+    const updated = await tx.task.update({ where: { id }, data: updateData(patch, existing, now) });
+    await recordEvents(tx, withTask(id, updateEvents(patch, existing)), now);
     return updated;
   });
   return task && toDto(task);

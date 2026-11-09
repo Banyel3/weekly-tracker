@@ -51,7 +51,9 @@ export type InputSchema = { type: "object"; properties: Record<string, JsonSchem
 
 const DATE_HELP = "YYYY-MM-DD in Asia/Manila, or the words today / tomorrow";
 const idProp: JsonSchema = { type: "string", description: "Task id, as returned by list_tasks, get_board or get_today" };
-const statusProp: JsonSchema = { type: "string", enum: [...STATUS_NAMES], description: "Board column (case-insensitive)" };
+const statusProp: JsonSchema = { type: "string", enum: [...STATUS_NAMES], description: "Board column, or future for a later week (case-insensitive)" };
+const FUTURE_HELP =
+  "future parks a task for a later week, off the board; a future task due on or before this Sunday is saved as this_week instead, and the hourly rollover moves the rest in when their week arrives.";
 const priorityProp: JsonSchema = { type: "string", enum: [...PRIORITY_NAMES], description: "Priority (case-insensitive)" };
 const dateProp = (what: string): JsonSchema => ({ type: "string", description: `${what}: ${DATE_HELP}` });
 const checklistProp: JsonSchema = {
@@ -170,7 +172,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "get_board",
     description:
-      "The whole board for the current week: every Backlog task plus this week's This week, In progress and Done tasks (sorted per column), all projects, counts, and the ids of tasks carried back from last week.",
+      "The whole board for the current week: every Backlog task plus this week's This week, In progress and Done tasks (sorted per column), all projects, counts, the ids of tasks carried back from last week, and the live Future tasks in a separate future list.",
     input_schema: objectSchema(),
     schema: empty,
     run: (_input, now) => listBoard(now),
@@ -255,7 +257,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "create_task",
     description:
-      "Create a task. Status defaults to backlog; this_week, in_progress or done plan it into the current week. A project name that does not exist yet is created with the next free colour. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.",
+      `Create a task. Status defaults to backlog; this_week, in_progress or done plan it into the current week; ${FUTURE_HELP} A project name that does not exist yet is created with the next free colour. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.`,
     input_schema: objectSchema(
       {
         title: { type: "string", minLength: 1, maxLength: 200, description: "Task title" },
@@ -299,7 +301,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "update_task",
     description:
-      "Edit a task's fields. Only the fields you pass change; null clears note, due or project. checklist replaces the whole list (items whose text is unchanged keep their ticked state). Use move_task to change the column. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.",
+      "Edit a task's fields. Only the fields you pass change; null clears note, due or project. checklist replaces the whole list (items whose text is unchanged keep their ticked state). Use move_task to change the column. Moving a future task's due date to this week or earlier plans it into this_week. Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale. Due dates are dates only (YYYY-MM-DD, Asia/Manila); the board stores no time of day, so do not promise one.",
     input_schema: objectSchema(
       {
         id: idProp,
@@ -349,7 +351,7 @@ const TOOLS: ToolSpec[] = [
   tool({
     name: "move_task",
     description:
-      "Move a task to another column. this_week, in_progress and done plan it into the current week; done records the completion time; backlog unplans it. Archived tasks must be restored first (restore_task). Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.",
+      `Move a task to another column. this_week, in_progress and done plan it into the current week; done records the completion time; backlog unplans it; ${FUTURE_HELP} Archived tasks must be restored first (restore_task). Take the id from a get_task or list_tasks result in this conversation; ids from older messages may be stale.`,
     input_schema: objectSchema({ id: idProp, status: statusProp }, ["id", "status"]),
     schema: () => z.object({ id: idInput, status: statusInput }).strict(),
     run: async ({ id, status }) => {
