@@ -101,6 +101,10 @@ describe("backCount", () => {
     expect(backCount(["a", "b", "gone"], tasks)).toBe(2);
     expect(backCount([], tasks)).toBe(0);
   });
+
+  it("leaves out a carried task that was moved to Future", () => {
+    expect(backCount(["a", "b"], [task("a", { status: "FUTURE", weekOf: null }), task("b")])).toBe(1);
+  });
 });
 
 describe("trendColor", () => {

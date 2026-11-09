@@ -7,7 +7,7 @@ const { prisma, tx } = vi.hoisted(() => {
     taskEvent: { createMany: vi.fn() },
   };
   const prisma = {
-    task: { findUnique: vi.fn(), findMany: vi.fn(async () => []), count: vi.fn(async () => 0) },
+    task: { findUnique: vi.fn(), findMany: vi.fn(async (_args: { where?: any }): Promise<Task[]> => []), count: vi.fn(async () => 0) },
     project: { findMany: vi.fn(async () => []) },
     taskEvent: { findMany: vi.fn() },
     $transaction: vi.fn((run: (client: typeof tx) => unknown) => run(tx)),
