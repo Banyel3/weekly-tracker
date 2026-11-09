@@ -479,10 +479,17 @@ describe("restore_task", () => {
   });
 
   it("restores then moves into the requested column", async () => {
-    withTask(row({ archived: true, status: "DONE" }));
-    const { task } = await ok("restore_task", { id: "t1", status: "this_week" });
-    expect(task).toMatchObject({ archived: false, status: "THIS_WEEK", weekOf: "2026-11-02" });
-    expect(eventTypes()).toEqual(["RESTORED", "PLANNED"]);
+    // Writes read the real clock for weekOf, so pin it to NOW's week.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    try {
+      withTask(row({ archived: true, status: "DONE" }));
+      const { task } = await ok("restore_task", { id: "t1", status: "this_week" });
+      expect(task).toMatchObject({ archived: false, status: "THIS_WEEK", weekOf: "2026-11-02" });
+      expect(eventTypes()).toEqual(["RESTORED", "PLANNED"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects a live task", async () => {
