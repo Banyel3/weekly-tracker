@@ -35,7 +35,7 @@ function Dot({ color }: { color: string }) {
 }
 
 export type DialogTarget =
-  | { mode: "create"; initialStatus: Status }
+  | { mode: "create"; initialStatus: Status; dueDate?: string }
   | { mode: "edit"; task: TaskDto }
   | { mode: "view"; task: TaskDto };
 
@@ -62,7 +62,7 @@ type Form = {
 };
 type Busy = "saving" | "restoring" | null;
 
-function formOf(target: DialogTarget | null): Form {
+export function formOf(target: DialogTarget | null): Form {
   const task = target && target.mode !== "create" ? target.task : null;
   return {
     title: task?.title ?? "",
@@ -70,7 +70,7 @@ function formOf(target: DialogTarget | null): Form {
     newName: "",
     newColor: DEFAULT_COLOR,
     priority: task?.priority ?? "NONE",
-    dueDate: task?.dueDate ?? "",
+    dueDate: task?.dueDate ?? (target?.mode === "create" ? (target.dueDate ?? "") : ""),
     note: task?.note ?? "",
     checklist: task?.checklist ?? [],
     status: task?.status ?? (target?.mode === "create" ? target.initialStatus : "BACKLOG"),

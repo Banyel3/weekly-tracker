@@ -24,7 +24,7 @@ import { FilterChip } from "../board/FilterChip";
 import { useFilters } from "../useFilters";
 import { useIsPhone } from "../useMediaQuery";
 import { useTaskDialog } from "../useTaskDialog";
-import { calendarTasks, fmtYmd, monthGrid, monthOf, shiftMonth, weekDays, ymdOfDayId, type Month } from "./calendar";
+import { addTarget, calendarTasks, fmtYmd, monthGrid, monthOf, shiftMonth, weekDays, ymdOfDayId, type Month } from "./calendar";
 import { DayColumn } from "./DayColumn";
 import { CAL_INSTRUCTIONS, CAL_KEYBOARD_CODES, calAnnouncements, dayCoordinates, type ChipData } from "./dnd";
 import { ChipPreview } from "./EventChip";
@@ -40,7 +40,7 @@ const TOGGLE =
 export function WeekCalendar() {
   const board = useBoardContext();
   const { filter, setFilter } = useFilters();
-  const { openTask } = useTaskDialog();
+  const { openTask, openCreate } = useTaskDialog();
   const [view, setView] = useState<View>("week");
   const today = board.today ?? todayYmd();
   const week = board.week ?? weekRange();
@@ -71,6 +71,11 @@ export function WeekCalendar() {
     scrolledToToday.current = true;
     el.scrollTo({ left: day.offsetLeft, behavior: "instant" });
   }, [phone, view, today]);
+
+  function addOn(ymd: string) {
+    const { initialStatus, dueDate } = addTarget(ymd, week);
+    openCreate(initialStatus, dueDate);
+  }
 
   function toggleDay(ymd: string) {
     const selected = filter?.kind === "day" && filter.ymd === ymd;
@@ -171,6 +176,7 @@ export function WeekCalendar() {
                   projectOf={projectOf}
                   onToggleDay={toggleDay}
                   onOpen={openTask}
+                  onAdd={addOn}
                 />
               ))}
             </div>
@@ -179,7 +185,7 @@ export function WeekCalendar() {
             </DragOverlay>
           </DndContext>
         ) : (
-          <MonthView month={month} today={today} tasksOn={tasksOn} projectOf={projectOf} onOpen={openTask} />
+          <MonthView month={month} today={today} tasksOn={tasksOn} projectOf={projectOf} onOpen={openTask} onAdd={addOn} />
         )}
       </div>
       {collapsed && (

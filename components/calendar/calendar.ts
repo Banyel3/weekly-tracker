@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { TaskDto } from "../../lib/tasks";
-import { shiftYmd, ymdToDate } from "../../lib/week";
+import { shiftYmd, ymdToDate, type WeekRange } from "../../lib/week";
+import type { DialogTarget } from "../board/TaskDialog";
 import type { Filter } from "../useFilters";
 
 export type Month = { year: number; month: number };
@@ -33,6 +34,16 @@ export function monthGrid({ year, month }: Month): string[] {
   const start = shiftYmd(first, -offset);
   return Array.from({ length: 42 }, (_, i) => shiftYmd(start, i));
 }
+
+/** A day up to this week's Sunday (Manila) lands in This week, a later one in Future. */
+export function addTarget(ymd: string, week: WeekRange): Extract<DialogTarget, { mode: "create" }> {
+  return { mode: "create", initialStatus: ymd <= week.end ? "THIS_WEEK" : "FUTURE", dueDate: ymd };
+}
+
+export const addLabel = (ymd: string) => `Add task on ${fmtYmd(ymd, "EEE d MMM")}`;
+
+/** A click in a day's free space, not on one of its chips or buttons. */
+export const isEmptySpot = (target: EventTarget | null) => !(target as Element | null)?.closest?.("button, a");
 
 export function isOverdue(task: TaskDto, today: string): boolean {
   return task.status !== "DONE" && task.dueDate !== null && task.dueDate < today;
