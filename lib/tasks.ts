@@ -103,6 +103,7 @@ function compareNullsLast(a: string | null, b: string | null): number {
   return a.localeCompare(b);
 }
 
+/** live counts open tasks outside Future, so it never overlaps the Future list. */
 export type BoardCounts = { live: number; archived: number; nudges: number };
 
 export type BoardDto = {
@@ -128,7 +129,7 @@ export async function listBoard(now: Date = new Date()): Promise<BoardDto> {
       },
       orderBy: { createdAt: "asc" },
     }),
-    prisma.task.count({ where: { archived: false } }),
+    prisma.task.count({ where: { archived: false, status: { not: Status.FUTURE } } }),
     prisma.task.count({ where: { archived: true } }),
     prisma.task.count({ where: { archived: false, status: Status.BACKLOG, rolloverCount: { gte: 2 } } }),
     prisma.taskEvent.findMany({

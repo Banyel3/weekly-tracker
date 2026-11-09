@@ -4,13 +4,13 @@ import { usePathname } from "next/navigation";
 import {
   Archive,
   BarChart3,
+  CalendarClock,
   CalendarDays,
   Command,
   Inbox,
   LayoutDashboard,
   Repeat,
   Send,
-  Sparkles,
 } from "lucide-react";
 import { useBoardContext } from "@/components/BoardProvider";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,6 @@ const SOON = [
   { icon: Inbox, label: "Quick capture" },
   { icon: Repeat, label: "Recurring tasks" },
   { icon: Send, label: "Telegram digest" },
-  { icon: Sparkles, label: "Future tasks" },
   { icon: Command, label: "Shortcuts" },
 ];
 
@@ -65,6 +64,14 @@ export function Sidebar({ showBars, titleAs: Title = "h1", onNavigate }: Props) 
             onNavigate={onNavigate}
           />
           <NavItem href="/#cal" icon={CalendarDays} label="Calendar" onNavigate={onNavigate} />
+          <NavItem
+            href="/future"
+            icon={CalendarClock}
+            label="Future tasks"
+            count={counts.future}
+            current={pathname === "/future"}
+            onNavigate={onNavigate}
+          />
           <NavItem
             href="/review"
             icon={BarChart3}

@@ -18,7 +18,7 @@ import { ColorSwatches, colorVar } from "../ColorSwatches";
 import type { NewTask } from "../useBoard";
 import { useIsPhone } from "../useMediaQuery";
 import { Checklist } from "./Checklist";
-import { COLUMNS, statusLabel, statusVar, type Status } from "./status";
+import { STATUS_OPTIONS, statusLabel, statusVar, type Status } from "./status";
 import { PriorityPills } from "./PriorityPills";
 
 const DEFAULT_COLOR: ProjectColor = "teal";
@@ -349,7 +349,7 @@ export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRest
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COLUMNS.map(({ status, label }) => (
+                    {STATUS_OPTIONS.map(({ status, label }) => (
                       <SelectItem key={status} value={status}>
                         <Dot color={statusVar(status)} />
                         {label}

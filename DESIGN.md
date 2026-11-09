@@ -30,6 +30,7 @@ semantic:
   status-this-week: "var(--chart-3)"
   status-in-progress: "var(--primary)"
   status-done: "var(--chart-4)"
+  status-future: "var(--muted-foreground)"
   project-rose: "oklch(0.72 0.14 15)"
   project-amber: "oklch(0.80 0.12 80)"
   project-lime: "oklch(0.78 0.14 125)"
@@ -108,10 +109,10 @@ Geist through `next/font/google`, exposed as `--font-geist` and forced as `--fon
 - **Priority:** `PriorityFlag` is a Flag icon, muted for High, `--alert` for Urgent, with an `sr-only` "high priority" / "urgent priority" unless the same fact is already said in nearby text.
 - **Badges:** outline `Badge` for status chips, project chips, the `Phase 3` tag and the carried-over count; filled `--primary` pill for the tab bar attention count; `soon` outline tag on disabled Phase 3 nav items.
 - **Stats row:** three `StatCard`s (`rounded-xl` `bg-card` p-4, 12px muted heading with a right-aligned hint): This week (progress circle + finished of planned), Finished per day (seven bars, today in `--primary`), In progress (`n / 3`, overdue and carried counts). Over the limit the WIP card gets the one Aceternity effect allowed on screen, a moving border, and the number turns `--alert`. The row waits for both the board and the review so its first paint shows final numbers.
-- **Week calendar:** Origin UI week view with Week / Month toggle. Day headers are buttons that filter the board to that day. Event chips are draggable to reschedule. With no due dates in the week it collapses to the header row plus one muted line: `no due dates this week · drag a card here or set a due date`.
+- **Week calendar:** Origin UI week view with Week / Month toggle. Day headers are buttons that filter the board to that day. Event chips are draggable to reschedule. Dated Future tasks show as fainter chips in `--muted-foreground` with a CalendarClock icon (`, future` for screen readers). With no due dates in the week it collapses to the header row plus one muted line: `no due dates this week · drag a card here or set a due date`.
 - **Phone carousel:** scroll-snap columns at `100vw − 3rem` (two-up at `50vw − 1.875rem` on tablets) with symmetric peeks, a guide row above (previous label, current column with dot and count, next label) and page dots. Long-press without moving opens the Move sheet; dragging toward an edge pages after the finger has moved 8px.
 - **Tab bar (< 900px):** five equal cells (Board, Calendar, Review, Archive, More), 56px plus the bottom inset, `bg-sidebar`; the current tab gets a 2px `--primary` top bar and `--primary` label. More opens the sidebar as a left sheet.
-- **Sidebar:** week range heading with `N back from last week` under it, OVERVIEW nav (Board, Calendar, Weekly review, Archive with counts; the review shows an attention badge for tasks carried twice), TOOLS with the `Phase 3` tag and disabled `soon` items, Projects (filter buttons with done/planned and a thin progress bar in the project colour, a `…` menu for rename, colour and delete), and the theme picker at the foot.
+- **Sidebar:** week range heading with `N back from last week` under it, OVERVIEW nav (Board, Calendar, Future tasks, Weekly review, Archive with counts; the review shows an attention badge for tasks carried twice), TOOLS with the `Phase 3` tag and disabled `soon` items, Projects (filter buttons with done/planned and a thin progress bar in the project colour, a `…` menu for rename, colour and delete), and the theme picker at the foot.
 - **Undo line:** popover surface, `rounded-lg`, 44px tall, pinned above the tab bar on phones and bottom-centre on desktop, max 480px. Copy is exact: `moved “<title>” to <Column> · undo`, `deleted “<title>” · undo`, `rescheduled “<title>” to <Mon d> · undo`. A thin bar shrinks over the 5-second window.
 - **Search + Archive:** one input with a leading Search icon and `Search tasks` placeholder (label `sr-only`), and an outline `Archive` button beside it. The archive page lists past weeks newest first with the same search field; rows open the dialog read-only with Restore.
 - **Hints:** `Hint` wraps a Radix tooltip at most 256px wide; icon-only buttons always have an `aria-label` and a hint.
@@ -119,7 +120,7 @@ Geist through `next/font/google`, exposed as `--font-geist` and forced as `--fon
 ## States
 
 - Loading: two pulsing `bg-muted/60` skeleton cards per column, stat cards with `aria-busy`.
-- Empty: `nothing here` (column), `nothing archived yet`, `nothing planned yet`, `nothing carried over`, the collapsed calendar line.
+- Empty: `nothing here` (column), `nothing parked for later` (Future), `nothing archived yet`, `nothing planned yet`, `nothing carried over`, the collapsed calendar line.
 - Errors: `couldn't load the board · retry`, `couldn't save · retry`, `couldn't load the numbers`.
 - Nudge: `Rolled over N weeks in a row. Split it, shrink it, or let it go.` in the dialog for a task carried twice or more.
 - Disabled: 50% opacity, no pointer events.

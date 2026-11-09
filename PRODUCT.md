@@ -14,7 +14,7 @@ One person: the owner, self-hosting this board on their own machine. They open i
 
 A weekly kanban with four columns: Backlog, This Week, In Progress, Done. The week is the unit of planning. Each task can belong to one project, shown as a small coloured chip, so the owner can tell at a glance which part of life it belongs to. The owner should be able to glance at the board and know, in under two seconds, what is due, what is in motion, and what is left this week. Success is a board that is opened daily, touched briefly, and never fought with.
 
-Around the board sits a small workspace, reached from the sidebar on a laptop and the bottom tab bar on a phone: **Board** (with the stats row and the week calendar above it), **Calendar** (tasks by due date, drag to reschedule), **Weekly review**, and **Archive** (past weeks, searchable, with restore). Phase 3 tools are listed as `soon` and do nothing yet. The app installs to a phone's home screen and is reached over the owner's tailnet.
+Around the board sits a small workspace, reached from the sidebar on a laptop and the bottom tab bar on a phone: **Board** (with the stats row and the week calendar above it), **Calendar** (tasks by due date, drag to reschedule), **Future tasks** (work parked for a later week, outside the four columns; a dated one moves into This week by itself when its week arrives), **Weekly review**, and **Archive** (past weeks, searchable, with restore). Phase 3 tools are listed as `soon` and do nothing yet. The app installs to a phone's home screen and is reached over the owner's tailnet.
 
 ## Rituals
 

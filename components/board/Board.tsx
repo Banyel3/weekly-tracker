@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { useBoardContext } from "../BoardProvider";
 import { STILL_PX, isLongPressWithoutMove } from "../gestures";
 import { DURATION_MS, EASE_OUT_CSS, useReducedMotion } from "../motion/config";
-import type { NewTask } from "../useBoard";
+import { submitDialog } from "../useBoard";
 import { useDebounced } from "../useDebounced";
 import { haptic } from "../haptics";
 import { useIsPhone } from "../useMediaQuery";
@@ -111,17 +111,6 @@ export function Board() {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const projectOf = (projectId: string | null) => (projectId ? (projectsById.get(projectId) ?? null) : null);
   const active = tasks.find((t) => t.id === activeId) ?? null;
-
-  async function onSubmit(body: NewTask): Promise<string | null> {
-    if (!dialog || dialog.mode === "view") return null;
-    if (dialog.mode === "create") {
-      board.addTask(body);
-      return null;
-    }
-    const { task } = dialog;
-    const { status, ...rest } = body;
-    return board.updateTask(task.id, status === task.status ? rest : body);
-  }
 
   function onDragStart({ active, activatorEvent }: DragStartEvent) {
     if (phone) haptic();
@@ -271,7 +260,7 @@ export function Board() {
         target={dialog}
         projects={projects}
         onCreateProject={(name, color) => board.addProject({ name, color })}
-        onSubmit={onSubmit}
+        onSubmit={(body) => submitDialog(board, dialog, body)}
         onDelete={board.removeTask}
         onClose={close}
       />

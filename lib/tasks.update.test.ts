@@ -92,6 +92,12 @@ describe("listBoard future", () => {
     expect(where.archived).toBe(false);
     expect(where.OR).toContainEqual({ status: { in: ["BACKLOG", "FUTURE"] } });
   });
+
+  it("leaves Future tasks out of the live count, so the Board and Future badges never count a task twice", async () => {
+    prisma.taskEvent.findMany.mockResolvedValue([]);
+    await listBoard(new Date("2026-11-04T04:00:00.000Z"));
+    expect(prisma.task.count.mock.calls[0]).toEqual([{ where: { archived: false, status: { not: "FUTURE" } } }]);
+  });
 });
 
 describe("Future tasks on save", () => {
