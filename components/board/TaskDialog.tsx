@@ -77,13 +77,16 @@ export function formOf(target: DialogTarget | null): Form {
   };
 }
 
-/** The opener if it is still live, else the card that now shows the task (a save can move it to another column). */
+/** The opener if it is still live, else the card that now shows the task (a save can move it to another column), else the Future Add button. */
 function returnFocus(el: HTMLElement | null, taskId: string | null) {
   const live = (node: HTMLElement | null) => node?.isConnected && !node.closest("[data-motion-pop-id]");
   if (el && live(el)) return el.focus({ preventScroll: true });
   if (!taskId) return;
   const titles = document.querySelectorAll<HTMLElement>(`[data-card-title="${CSS.escape(taskId)}"]`);
-  [...titles].find(live)?.focus({ preventScroll: true });
+  const card = [...titles].find(live);
+  if (card) return card.focus({ preventScroll: true });
+  // The task left the list (a save on /future promoted it), so land on the Future page's Add button.
+  document.getElementById("future-add")?.focus({ preventScroll: true });
 }
 
 export function TaskDialog({ target, projects, onCreateProject, onSubmit, onRestore, onDelete, onClose }: Props) {
