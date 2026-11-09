@@ -2,6 +2,8 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { CalendarClock } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
@@ -21,12 +23,14 @@ type Props = {
 
 function ChipText({ task, project, today }: Omit<Props, "onOpen">) {
   const done = task.status === "DONE";
+  const future = task.status === "FUTURE";
   return (
     <>
+      {future && <Icon icon={CalendarClock} size="sm" className="mr-1 inline-block align-[-3px]" />}
       {task.title}
       <span className="sr-only">
         {project ? `, ${project.name}` : ""}
-        {done ? ", done" : isOverdue(task, today) ? ", overdue" : ""}
+        {future ? ", future" : done ? ", done" : isOverdue(task, today) ? ", overdue" : ""}
       </span>
     </>
   );
@@ -34,9 +38,10 @@ function ChipText({ task, project, today }: Omit<Props, "onOpen">) {
 
 function tone(task: TaskDto, project: ProjectDto | null, today: string) {
   const done = task.status === "DONE";
+  const future = task.status === "FUTURE";
   return {
-    className: cn(CHIP, done && "line-through opacity-55"),
-    style: chipStyle({ color: project?.color ?? null, done, overdue: isOverdue(task, today) }),
+    className: cn(CHIP, done && "line-through opacity-55", future && "text-muted-foreground"),
+    style: chipStyle({ color: project?.color ?? null, done, overdue: isOverdue(task, today), future }),
   };
 }
 

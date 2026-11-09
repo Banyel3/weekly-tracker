@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectColor, ProjectDto } from "@/lib/projects";
 import type { BoardCounts, BoardDto, TaskDto } from "@/lib/tasks";
 import { todayYmd, type WeekRange } from "@/lib/week";
-import { COLUMNS } from "./board/dnd";
+import { statusLabel } from "./board/status";
+import type { DialogTarget } from "./board/TaskDialog";
+import { isFuture, splitCounts } from "./future/future";
 import { isSaving, tempTaskId } from "./savingTask";
 import { deletedLabel, movedLabel, rescheduledLabel, type UndoSlot } from "./useUndo";
 
@@ -29,8 +31,6 @@ async function send(url: string, init: RequestInit): Promise<Response | null> {
 export function sendDelete(url: string): Promise<Response | null> {
   return send(url, { method: "DELETE", keepalive: true });
 }
-
-const columnLabel = (status: Status) => COLUMNS.find((c) => c.status === status)?.label ?? status;
 
 function insertAt<T>(items: T[], index: number, item: T): T[] {
   const i = Math.max(0, Math.min(index, items.length));
@@ -88,15 +88,17 @@ export function useBoard(register: UndoSlot["register"]) {
     const data: BoardDto = await res.json();
     setWeek(data.week);
     setToday(data.today);
-    setCounts(data.counts);
     setCarriedIds(data.carriedIds);
     const goneProject = (id: string | null) => id !== null && hiddenProjects.current.has(id);
     setProjects(data.projects.filter((p) => !goneProject(p.id)));
-    setTasks(
-      data.tasks
-        .filter((t) => !hiddenTasks.current.has(t.id))
-        .map((t) => (goneProject(t.projectId) ? { ...t, projectId: null } : t)),
-    );
+    // Future tasks share the one task list, so moves, edits, deletes and undo work on them like on any card;
+    // the board columns and stats pick their statuses by name and never see them.
+    const loaded = [...data.tasks, ...data.future]
+      .filter((t) => !hiddenTasks.current.has(t.id))
+      .map((t) => (goneProject(t.projectId) ? { ...t, projectId: null } : t));
+    setTasks(loaded);
+    // The server's live count leaves Future out; the client counts every live task (see splitCounts).
+    setCounts({ ...data.counts, live: data.counts.live + loaded.filter(isFuture).length });
     setStatus("ready");
     setError((e) => (e === "load" ? null : e));
     bump();
@@ -136,7 +138,7 @@ export function useBoard(register: UndoSlot["register"]) {
       const moved: TaskDto = await res.json();
       replace(task.id, moved);
       bump();
-      register({ label: movedLabel(task.title, columnLabel(to)), undo: () => undoMove(task, moved) });
+      register({ label: movedLabel(task.title, statusLabel(to)), undo: () => undoMove(task, moved) });
       return true;
     },
     [patchTask, undoMove, register],
@@ -337,7 +339,7 @@ export function useBoard(register: UndoSlot["register"]) {
   return {
     week,
     today,
-    counts,
+    counts: splitCounts(counts, tasks),
     carriedIds,
     projects,
     tasks,
@@ -359,3 +361,19 @@ export function useBoard(register: UndoSlot["register"]) {
 }
 
 export type BoardState = ReturnType<typeof useBoard>;
+
+/** The task dialog's save: create adds; edit leaves an unchanged status out so the server does not see a move. */
+export async function submitDialog(
+  board: Pick<BoardState, "addTask" | "updateTask">,
+  target: DialogTarget | null,
+  body: NewTask,
+): Promise<string | null> {
+  if (!target || target.mode === "view") return null;
+  if (target.mode === "create") {
+    board.addTask(body);
+    return null;
+  }
+  const { task } = target;
+  const { status, ...rest } = body;
+  return board.updateTask(task.id, status === task.status ? rest : body);
+}

@@ -83,6 +83,7 @@
   --status-this-week: var(--chart-3);
   --status-in-progress: var(--primary);
   --status-done: var(--chart-4);
+  --status-future: var(--muted-foreground);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --motion: 150ms var(--ease);
 }

@@ -5,7 +5,8 @@ import { shiftYmd, ymdToDate } from "../../lib/week";
 import type { Filter } from "../useFilters";
 
 export type Month = { year: number; month: number };
-export type ChipTone = { color: string | null; done: boolean; overdue: boolean };
+/** future: a Future task, drawn fainter so it reads as parked rather than planned. */
+export type ChipTone = { color: string | null; done: boolean; overdue: boolean; future?: boolean };
 
 export const fmtYmd = (ymd: string, pattern: string) => formatInTimeZone(ymdToDate(ymd), "UTC", pattern);
 
@@ -49,11 +50,11 @@ export function calendarTasks(tasks: TaskDto[], filter: Filter, from: string, to
   );
 }
 
-export function chipStyle({ color, done, overdue }: ChipTone): CSSProperties {
+export function chipStyle({ color, done, overdue, future }: ChipTone): CSSProperties {
   const hue = `var(--project-${color ?? "slate"})`;
   const edge = overdue && !done ? "var(--alert)" : hue;
   return {
-    background: `color-mix(in oklch, ${hue} 22%, transparent)`,
+    background: `color-mix(in oklch, ${hue} ${future ? 8 : 22}%, transparent)`,
     boxShadow: `inset 3px 0 0 ${edge}`,
   };
 }
