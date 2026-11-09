@@ -9,7 +9,7 @@ import type { DialogTarget } from "./board/TaskDialog";
 export type TaskDialogState = {
   target: DialogTarget | null;
   openTask: (task: TaskDto) => void;
-  openCreate: (initialStatus: Status) => void;
+  openCreate: (initialStatus: Status, dueDate?: string) => void;
   close: () => void;
 };
 
@@ -22,7 +22,7 @@ export function useTaskDialogState(): TaskDialogState {
       openTask: (task: TaskDto) => {
         if (!isSaving(task)) setTarget({ mode: "edit", task });
       },
-      openCreate: (initialStatus: Status) => setTarget({ mode: "create", initialStatus }),
+      openCreate: (initialStatus: Status, dueDate?: string) => setTarget({ mode: "create", initialStatus, dueDate }),
       close: () => setTarget(null),
     }),
     [],

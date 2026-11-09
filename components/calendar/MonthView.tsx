@@ -4,7 +4,8 @@
 import type { ProjectDto } from "@/lib/projects";
 import type { TaskDto } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
-import { fmtYmd, monthGrid, type Month } from "./calendar";
+import { fmtYmd, isEmptySpot, monthGrid, type Month } from "./calendar";
+import { AddDayButton } from "./DayColumn";
 import { StaticChip } from "./EventChip";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -15,9 +16,10 @@ type Props = {
   tasksOn: (ymd: string) => TaskDto[];
   projectOf: (id: string | null) => ProjectDto | null;
   onOpen: (task: TaskDto) => void;
+  onAdd: (ymd: string) => void;
 };
 
-export function MonthView({ month, today, tasksOn, projectOf, onOpen }: Props) {
+export function MonthView({ month, today, tasksOn, projectOf, onOpen, onAdd }: Props) {
   const days = monthGrid(month);
   const inMonth = (ymd: string) => Number(ymd.slice(5, 7)) === month.month;
   return (
@@ -38,20 +40,24 @@ export function MonthView({ month, today, tasksOn, projectOf, onOpen }: Props) {
               key={ymd}
               role="group"
               aria-label={`${fmtYmd(ymd, "EEEE, MMM d")}${isToday ? ", today" : ""}: ${tasks.length} due`}
+              onClick={(e) => isEmptySpot(e.target) && onAdd(ymd)}
               className={cn(
-                "flex min-h-[88px] min-w-0 flex-col gap-1 border-r border-b px-1.5 pt-1.5 pb-2 [&:nth-child(7n)]:border-r-0 [&:nth-last-child(-n+7)]:border-b-0",
+                "group/day flex min-h-[88px] min-w-0 flex-col gap-1 border-r border-b px-1.5 pt-1.5 pb-2 [&:nth-child(7n)]:border-r-0 [&:nth-last-child(-n+7)]:border-b-0",
                 isToday && "bg-muted",
                 !inMonth(ymd) && "text-muted-foreground",
               )}
             >
-              <span
-                className={cn(
-                  "self-start text-xs font-medium tabular-nums",
-                  isToday && "rounded-full bg-primary px-1.5 text-primary-foreground",
-                )}
-              >
-                {fmtYmd(ymd, "d")}
-              </span>
+              <div className="flex items-start gap-1">
+                <span
+                  className={cn(
+                    "text-xs font-medium tabular-nums",
+                    isToday && "rounded-full bg-primary px-1.5 text-primary-foreground",
+                  )}
+                >
+                  {fmtYmd(ymd, "d")}
+                </span>
+                <AddDayButton ymd={ymd} onAdd={onAdd} />
+              </div>
               {tasks.map((task) => (
                 <StaticChip
                   key={task.id}

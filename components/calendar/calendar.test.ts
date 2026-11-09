@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TaskDto } from "../../lib/tasks";
-import { calendarTasks, chipStyle, dayLabel, monthGrid, shiftMonth, weekDays } from "./calendar";
+import { weekRange } from "../../lib/week";
+import { addLabel, addTarget, calendarTasks, chipStyle, dayLabel, isEmptySpot, monthGrid, shiftMonth, weekDays } from "./calendar";
 
 const task = (over: Partial<TaskDto>) =>
   ({
@@ -84,5 +85,54 @@ describe("calendarTasks", () => {
       "a",
       "b",
     ]);
+  });
+});
+
+describe("addTarget", () => {
+  // Wed 11 Nov 2026, 10:00 in Manila: the week runs Mon 9 to Sun 15 Nov.
+  const week = weekRange(new Date("2026-11-11T02:00:00Z"));
+
+  it("lands a day later this week in This week", () => {
+    expect(addTarget("2026-11-15", week)).toEqual({ mode: "create", initialStatus: "THIS_WEEK", dueDate: "2026-11-15" });
+  });
+
+  it("lands today in This week", () => {
+    expect(addTarget("2026-11-11", week).initialStatus).toBe("THIS_WEEK");
+  });
+
+  it("lands a day last week in This week, as an overdue task", () => {
+    expect(addTarget("2026-11-05", week).initialStatus).toBe("THIS_WEEK");
+  });
+
+  it("lands a day next week in Future", () => {
+    expect(addTarget("2026-11-16", week)).toEqual({ mode: "create", initialStatus: "FUTURE", dueDate: "2026-11-16" });
+  });
+
+  it("follows the Manila week at 00:30 on a Monday, still Sunday in UTC", () => {
+    // 16:30 UTC on Sun 15 Nov is 00:30 on Mon 16 Nov in Manila, so the new week has started.
+    const monday = weekRange(new Date("2026-11-15T16:30:00Z"));
+    expect(addTarget("2026-11-16", monday)).toEqual({ mode: "create", initialStatus: "THIS_WEEK", dueDate: "2026-11-16" });
+    expect(addTarget("2026-11-22", monday).initialStatus).toBe("THIS_WEEK");
+    expect(addTarget("2026-11-23", monday).initialStatus).toBe("FUTURE");
+  });
+});
+
+describe("isEmptySpot", () => {
+  const inside = (selector: string | null) => ({
+    closest: (s: string) => (selector && s.split(",").map((x) => x.trim()).includes(selector) ? {} : null),
+  });
+
+  it("treats a click on a chip or a button as not empty", () => {
+    expect(isEmptySpot(inside("button") as unknown as EventTarget)).toBe(false);
+  });
+
+  it("treats a click on the day's free space as empty", () => {
+    expect(isEmptySpot(inside(null) as unknown as EventTarget)).toBe(true);
+  });
+});
+
+describe("addLabel", () => {
+  it("names the day the add button adds to", () => {
+    expect(addLabel("2026-11-10")).toBe("Add task on Tue 10 Nov");
   });
 });
